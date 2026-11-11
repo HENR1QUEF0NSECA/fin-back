@@ -24,9 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         // Rotas públicas que não precisam de autenticação
         String path = request.getRequestURI();
-        if (path.equals("/api/auth/login") || 
-            path.equals("/api/users/register") ||
-            path.startsWith("/h2-console")) {
+        if (path.equals("/api/auth/login") || path.equals("/api/users/register")) {
             filterChain.doFilter(request, response);
             return;
         }

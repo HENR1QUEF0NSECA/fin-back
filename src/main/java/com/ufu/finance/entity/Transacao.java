@@ -1,7 +1,6 @@
 package com.ufu.finance.entity;
 
 import com.ufu.finance.enums.TipoTransacao;
-import com.ufu.finance.util.TipoTransacaoConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -46,10 +45,10 @@ public class Transacao {
     private String descricao;
 
     /**
-     * Tipo salvo como VARCHAR(1) no banco: 'R' = Receita, 'D' = Despesa.
-     * Usamos @Convert com TipoTransacaoConverter para garantir o mapeamento correto.
+     * Tipo salvo como VARCHAR(1) no banco: 'R' = Receita, 'D' = Despesa
+     * (EnumType.STRING grava o nome da constante do enum).
      */
-    @Convert(converter = TipoTransacaoConverter.class)
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 1)
     private TipoTransacao tipo;
 

@@ -35,9 +35,9 @@ public class TransacaoController {
      *   "tipo": "D",
      *   "valor": 150.00,
      *   "idCategoria": 1,
-     *   "descricao": "Uber para o trabalho",
-     *   "dataTransacao": "2025-02-15"
+     *   "descricao": "Uber para o trabalho"
      * }
+     * A data/hora é sempre a do momento da criação.
      */
     @PostMapping
     public ResponseEntity<TransacaoResponseDTO> criar(

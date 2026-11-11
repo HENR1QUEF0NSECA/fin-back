@@ -3,7 +3,6 @@ package com.ufu.finance.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -13,7 +12,6 @@ import java.math.BigDecimal;
  * DTO para requisição de criação/atualização de orçamento
  */
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 public class OrcamentoRequestDTO {
 

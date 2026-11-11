@@ -172,9 +172,7 @@ public class TransacaoService {
      * (para gráfico de linha/barras)
      */
     public EvolucaoMensalDTO evolucaoAnual(Long usuarioId, int ano) {
-        if (ano < 2000 || ano > LocalDate.now().getYear() + 1) {
-            throw new RuntimeException("Ano inválido");
-        }
+        validarAno(ano);
 
         List<EvolucaoMensalDTO.PontoMensalDTO> receitas = transacaoRepository
                 .sumPorMesNoAno(usuarioId, TipoTransacao.R, ano)
@@ -199,6 +197,10 @@ public class TransacaoService {
         if (mes < 1 || mes > 12) {
             throw new RuntimeException("Mês inválido, deve ser entre 1 e 12");
         }
+        validarAno(ano);
+    }
+
+    private void validarAno(int ano) {
         if (ano < 2000 || ano > LocalDate.now().getYear() + 1) {
             throw new RuntimeException("Ano inválido");
         }

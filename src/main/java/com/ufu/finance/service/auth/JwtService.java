@@ -2,7 +2,6 @@ package com.ufu.finance.service.auth;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -42,14 +41,15 @@ public class JwtService {
                 .subject(userId.toString())
                 .issuedAt(now)
                 .expiration(expirationDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
-    
+
     /**
-     * Extrai todas as claims do token
+     * Extrai todas as claims do token. Lança exceção se a assinatura for
+     * inválida ou se o token estiver expirado.
      */
-    public Claims extractAllClaims(String token) {
+    private Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -74,24 +74,13 @@ public class JwtService {
     }
     
     /**
-     * Verifica se o token expirou
-     */
-    public boolean isTokenExpired(String token) {
-        try {
-            Claims claims = extractAllClaims(token);
-            return claims.getExpiration().before(new Date());
-        } catch (Exception e) {
-            return true;
-        }
-    }
-    
-    /**
-     * Valida o token
+     * Valida o token. O jjwt já rejeita token expirado ou com assinatura
+     * inválida durante o parse, então basta tentar extrair as claims.
      */
     public boolean validateToken(String token) {
         try {
             extractAllClaims(token);
-            return !isTokenExpired(token);
+            return true;
         } catch (Exception e) {
             return false;
         }

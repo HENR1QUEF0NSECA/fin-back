@@ -21,10 +21,4 @@ public class UserDTO {
 
     @NotBlank(message = "Senha é obrigatória")
     private String senha;
-    
-    public UserDTO(String nome, String email, String senha) {
-        this.nome = nome;
-        this.email = email;
-        this.senha = senha;
-    }
 }
