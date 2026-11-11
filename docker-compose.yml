@@ -7,7 +7,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
     ports:
-      - "5432:5432"
+      # Porta no seu computador. Se já tiver um Postgres local na 5432,
+      # rode com POSTGRES_PORT=5433 (a API no Docker não é afetada).
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
