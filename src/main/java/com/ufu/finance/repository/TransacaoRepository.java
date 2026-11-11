@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -22,9 +22,9 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
     /** Transações de um usuário filtradas por tipo (R ou D) */
     List<Transacao> findByUsuarioIdAndTipoOrderByDataHoraTransacaoDesc(Long usuarioId, TipoTransacao tipo);
 
-    /** Transações de um usuário em um intervalo de datas */
+    /** Transações de um usuário em um intervalo de data/hora (inclusivo nas duas pontas) */
     List<Transacao> findByUsuarioIdAndDataHoraTransacaoBetweenOrderByDataHoraTransacaoDesc(
-            Long usuarioId, LocalDate inicio, LocalDate fim);
+            Long usuarioId, LocalDateTime inicio, LocalDateTime fim);
 
     /** Transações de um usuário dentro de um mês/ano específico */
     @Query("""

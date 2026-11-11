@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -114,8 +115,10 @@ public class TransacaoService {
         if (inicio.isAfter(fim)) {
             throw new RuntimeException("Data de início não pode ser posterior à data de fim");
         }
+        // dh_transacao é data+hora: vai do início do primeiro dia até o fim do último
         return transacaoRepository
-                .findByUsuarioIdAndDataHoraTransacaoBetweenOrderByDataHoraTransacaoDesc(usuarioId, inicio, fim)
+                .findByUsuarioIdAndDataHoraTransacaoBetweenOrderByDataHoraTransacaoDesc(
+                        usuarioId, inicio.atStartOfDay(), fim.atTime(LocalTime.MAX))
                 .stream()
                 .map(TransacaoResponseDTO::new)
                 .collect(Collectors.toList());
