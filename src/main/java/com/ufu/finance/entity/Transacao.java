@@ -45,7 +45,7 @@ public class Transacao {
     private String descricao;
 
     /**
-     * Tipo salvo como VARCHAR(1) no banco: 'R' = Receita, 'D' = Despesa
+     * Tipo salvo como texto de 1 caractere no banco: 'R' = Receita, 'D' = Despesa
      * (EnumType.STRING grava o nome da constante do enum).
      */
     @Enumerated(EnumType.STRING)
