@@ -52,7 +52,6 @@ curl -X POST http://localhost:8080/api/auth/login `
 
 - [ ] Ler [DOCKER_SETUP.md](./DOCKER_SETUP.md) para mais detalhes
 - [ ] Testar endpoints em [requests.http](./requests.http) (com VSCode REST Client)
-- [ ] Usar [ANGULAR_SERVICE_EXAMPLE.ts](./ANGULAR_SERVICE_EXAMPLE.ts) no seu projeto Angular
 - [ ] Conectar seu frontend Angular em `localhost:4200` (CORS já está configurado ✅)
 
 ---

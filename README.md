@@ -65,14 +65,6 @@ Quer compartilhar um link com seu professor? Veja [RAILWAY_DEPLOY.md](./RAILWAY_
 
 O projeto já possui configuração de CORS para Angular local em `localhost:4200`.
 
-### Arquivo de Exemplo
-
-Veja [ANGULAR_SERVICE_EXAMPLE.ts](./ANGULAR_SERVICE_EXAMPLE.ts) com:
-- Serviço completo Angular HttpClient
-- Todas as chamadas de API prontas
-- Interceptadores JWT
-- Exemplos de uso em componentes
-
 ### Teste Rápido de Endpoints
 
 Use o arquivo [requests.http](./requests.http) com **VSCode REST Client**:
