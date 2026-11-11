@@ -3,6 +3,7 @@ package com.ufu.finance.exception.handler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -36,6 +37,21 @@ public class GlobalExceptionHandler {
         resposta.put("timestamp", LocalDateTime.now());
 
         return ResponseEntity.badRequest().body(resposta);
+    }
+
+    /**
+     * Mantém o status definido por quem lançou a exceção, como os
+     * ResponseStatusException do OrcamentoService (409 duplicado, 403 acesso negado).
+     * Sem este handler, o de RuntimeException abaixo capturava tudo e devolvia 400.
+     */
+    @ExceptionHandler(ErrorResponseException.class)
+    public ResponseEntity<Map<String, Object>> handleErrorResponseException(ErrorResponseException ex) {
+        Map<String, Object> resposta = new LinkedHashMap<>();
+        resposta.put("status", ex.getStatusCode().value());
+        resposta.put("erro", ex.getBody().getDetail());
+        resposta.put("timestamp", LocalDateTime.now());
+
+        return ResponseEntity.status(ex.getStatusCode()).body(resposta);
     }
 
     /**
