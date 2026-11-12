@@ -9,7 +9,9 @@ import com.ufu.finance.repository.CategoriaRepository;
 import com.ufu.finance.repository.TransacaoRepository;
 import com.ufu.finance.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -71,10 +73,11 @@ public class TransacaoService {
     /** Remove uma transação — só o dono pode deletar */
     public void deletar(Long idTransacao, Long usuarioId) {
         Transacao transacao = transacaoRepository.findById(idTransacao)
-                .orElseThrow(() -> new RuntimeException("Transação não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transação não encontrada"));
 
         if (!transacao.getUsuario().getId().equals(usuarioId)) {
-            throw new RuntimeException("Acesso negado: você não pode deletar esta transação");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Acesso negado: você não pode deletar esta transação");
         }
 
         transacaoRepository.delete(transacao);
@@ -127,7 +130,7 @@ public class TransacaoService {
     /** Transações por categoria */
     public List<TransacaoResponseDTO> listarPorCategoria(Long usuarioId, Integer categoriaId) {
         categoriaRepository.findById(categoriaId)
-                .orElseThrow(() -> new RuntimeException("Categoria não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoria não encontrada"));
 
         return transacaoRepository
                 .findByUsuarioIdAndCategoriaIdOrderByDataHoraTransacaoDesc(usuarioId, categoriaId)
