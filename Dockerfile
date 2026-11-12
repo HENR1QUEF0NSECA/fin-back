@@ -9,5 +9,7 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# O container roda em UTC. Sem fixar o fuso, LocalDateTime.now() grava as
+# transações 3h à frente do horário de Brasília (e as das 21h caem no dia seguinte).
+ENTRYPOINT ["java", "-Duser.timezone=America/Sao_Paulo", "-jar", "app.jar"]
 
