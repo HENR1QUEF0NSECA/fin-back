@@ -6,6 +6,8 @@ import com.ufu.finance.dto.TransacaoRequestDTO;
 import com.ufu.finance.dto.TransacaoResponseDTO;
 import com.ufu.finance.enums.TipoTransacao;
 import com.ufu.finance.service.TransacaoService;
+import com.ufu.finance.validation.Ano;
+import com.ufu.finance.validation.Mes;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,8 +95,8 @@ public class TransacaoController {
      */
     @GetMapping("/mes")
     public ResponseEntity<List<TransacaoResponseDTO>> listarPorMes(
-            @RequestParam int mes,
-            @RequestParam int ano,
+            @RequestParam @Mes int mes,
+            @RequestParam @Ano int ano,
             HttpServletRequest request) {
 
         Long usuarioId = (Long) request.getAttribute("userId");
@@ -137,8 +139,8 @@ public class TransacaoController {
      */
     @GetMapping("/dashboard/resumo")
     public ResponseEntity<ResumoMensalDTO> resumoMensal(
-            @RequestParam int mes,
-            @RequestParam int ano,
+            @RequestParam @Mes int mes,
+            @RequestParam @Ano int ano,
             HttpServletRequest request) {
 
         Long usuarioId = (Long) request.getAttribute("userId");
@@ -151,7 +153,7 @@ public class TransacaoController {
      */
     @GetMapping("/dashboard/evolucao")
     public ResponseEntity<EvolucaoMensalDTO> evolucaoAnual(
-            @RequestParam int ano,
+            @RequestParam @Ano int ano,
             HttpServletRequest request) {
 
         Long usuarioId = (Long) request.getAttribute("userId");

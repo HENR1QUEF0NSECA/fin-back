@@ -1,5 +1,7 @@
 package com.ufu.finance.dto;
 
+import com.ufu.finance.validation.Ano;
+import com.ufu.finance.validation.Mes;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
@@ -19,9 +21,11 @@ public class OrcamentoRequestDTO {
     private Integer idCategoria;
 
     @NotNull(message = "Mês é obrigatório")
+    @Mes
     private Integer mes;
 
     @NotNull(message = "Ano é obrigatório")
+    @Ano
     private Integer ano;
 
     @NotNull(message = "Limite é obrigatório")

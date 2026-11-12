@@ -3,6 +3,8 @@ package com.ufu.finance.controller;
 import com.ufu.finance.dto.OrcamentoRequestDTO;
 import com.ufu.finance.dto.OrcamentoResponseDTO;
 import com.ufu.finance.service.OrcamentoService;
+import com.ufu.finance.validation.Ano;
+import com.ufu.finance.validation.Mes;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -104,8 +106,8 @@ public class OrcamentoController {
      */
     @GetMapping("/mes")
     public ResponseEntity<List<OrcamentoResponseDTO>> listarPorMes(
-            @RequestParam int mes,
-            @RequestParam int ano,
+            @RequestParam @Mes int mes,
+            @RequestParam @Ano int ano,
             HttpServletRequest request) {
 
         Long usuarioId = (Long) request.getAttribute("userId");
@@ -120,8 +122,8 @@ public class OrcamentoController {
     @GetMapping("/categoria/{idCategoria}/mes")
     public ResponseEntity<OrcamentoResponseDTO> buscarPorCategoriaMes(
             @PathVariable Integer idCategoria,
-            @RequestParam int mes,
-            @RequestParam int ano,
+            @RequestParam @Mes int mes,
+            @RequestParam @Ano int ano,
             HttpServletRequest request) {
 
         Long usuarioId = (Long) request.getAttribute("userId");

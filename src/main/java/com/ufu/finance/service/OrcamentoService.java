@@ -6,15 +6,18 @@ import com.ufu.finance.entity.Categoria;
 import com.ufu.finance.entity.Orcamento;
 import com.ufu.finance.entity.Usuario;
 import com.ufu.finance.enums.TipoTransacao;
+import com.ufu.finance.exception.AcessoNegadoException;
+import com.ufu.finance.exception.ConflitoException;
+import com.ufu.finance.exception.NaoAutenticadoException;
+import com.ufu.finance.exception.RecursoNaoEncontradoException;
+import com.ufu.finance.exception.RequisicaoInvalidaException;
 import com.ufu.finance.repository.CategoriaRepository;
 import com.ufu.finance.repository.OrcamentoRepository;
 import com.ufu.finance.repository.TransacaoRepository;
 import com.ufu.finance.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -50,17 +53,15 @@ public class OrcamentoService {
     // ─── CRUD ────────────────────────────────────────────────────────────────
 
     public OrcamentoResponseDTO criar(OrcamentoRequestDTO dto, Long usuarioId) {
-        validarMesAno(dto.getMes(), dto.getAno());
-
         Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado"));
+                .orElseThrow(() -> new NaoAutenticadoException("Usuário não encontrado"));
 
         Categoria categoria = categoriaRepository.findById(dto.getIdCategoria())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Categoria não encontrada"));
+                .orElseThrow(() -> new RequisicaoInvalidaException("Categoria não encontrada"));
 
         if (orcamentoRepository.existsByUsuarioIdAndCategoriaIdAndMesAndAno(
                 usuarioId, dto.getIdCategoria(), dto.getMes(), dto.getAno())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
+            throw new ConflitoException(
                     "Já existe orçamento para esta categoria no mês/ano informado");
         }
 
@@ -76,7 +77,7 @@ public class OrcamentoService {
             return montarResponse(saved);
         } catch (DataIntegrityViolationException e) {
             // Defesa em profundidade caso a verificação acima escape em concorrência.
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
+            throw new ConflitoException(
                     "Já existe orçamento para esta categoria no mês/ano informado");
         }
     }
@@ -87,8 +88,6 @@ public class OrcamentoService {
     }
 
     public OrcamentoResponseDTO atualizar(Long id, OrcamentoRequestDTO dto, Long usuarioId) {
-        validarMesAno(dto.getMes(), dto.getAno());
-
         Orcamento orcamento = buscarEAutorizar(id, usuarioId);
 
         // Verifica se a nova combinação (categoria, mês, ano) não colide com outro orçamento.
@@ -99,12 +98,12 @@ public class OrcamentoService {
 
         if (mudouChave && orcamentoRepository.existsByUsuarioIdAndCategoriaIdAndMesAndAno(
                 usuarioId, dto.getIdCategoria(), dto.getMes(), dto.getAno())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
+            throw new ConflitoException(
                     "Já existe orçamento para esta categoria no mês/ano informado");
         }
 
         Categoria categoria = categoriaRepository.findById(dto.getIdCategoria())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Categoria não encontrada"));
+                .orElseThrow(() -> new RequisicaoInvalidaException("Categoria não encontrada"));
 
         orcamento.setCategoria(categoria);
         orcamento.setMes(dto.getMes());
@@ -115,7 +114,7 @@ public class OrcamentoService {
             Orcamento saved = orcamentoRepository.save(orcamento);
             return montarResponse(saved);
         } catch (DataIntegrityViolationException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
+            throw new ConflitoException(
                     "Já existe orçamento para esta categoria no mês/ano informado");
         }
     }
@@ -134,7 +133,6 @@ public class OrcamentoService {
     }
 
     public List<OrcamentoResponseDTO> listarOrcamentosMes(Long usuarioId, int mes, int ano) {
-        validarMesAno(mes, ano);
         return orcamentoRepository.findByUsuarioIdAndMesAndAno(usuarioId, mes, ano).stream()
                 .map(this::montarResponse)
                 .collect(Collectors.toList());
@@ -142,10 +140,9 @@ public class OrcamentoService {
 
     public OrcamentoResponseDTO buscarOrcamentoCategoriaMes(
             Long usuarioId, Integer idCategoria, int mes, int ano) {
-        validarMesAno(mes, ano);
         Orcamento orcamento = orcamentoRepository
                 .findByUsuarioIdAndCategoriaIdAndMesAndAno(usuarioId, idCategoria, mes, ano)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Orçamento não encontrado para esta categoria/mês"));
         return montarResponse(orcamento);
     }
@@ -175,9 +172,9 @@ public class OrcamentoService {
 
     private Orcamento buscarEAutorizar(Long id, Long usuarioId) {
         Orcamento orcamento = orcamentoRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Orçamento não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Orçamento não encontrado"));
         if (!orcamento.getUsuario().getId().equals(usuarioId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+            throw new AcessoNegadoException(
                     "Acesso negado: este orçamento pertence a outro usuário");
         }
         return orcamento;
@@ -198,14 +195,5 @@ public class OrcamentoService {
         BigDecimal soma = transacaoRepository.sumByCategoriaTipoMesAno(
                 usuarioId, idCategoria, TipoTransacao.D, mes, ano);
         return soma != null ? soma : BigDecimal.ZERO;
-    }
-
-    private void validarMesAno(int mes, int ano) {
-        if (mes < 1 || mes > 12) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mês inválido, deve ser entre 1 e 12");
-        }
-        if (ano < 2000 || ano > 2100) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ano inválido");
-        }
     }
 }

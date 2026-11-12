@@ -3,6 +3,7 @@ package com.ufu.finance.service.auth;
 import com.ufu.finance.dto.AuthResponseDTO;
 import com.ufu.finance.dto.LoginDTO;
 import com.ufu.finance.entity.Usuario;
+import com.ufu.finance.exception.NaoAutenticadoException;
 import com.ufu.finance.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,14 +23,14 @@ public class AuthService {
      */
     public AuthResponseDTO login(LoginDTO loginDTO) {
         Usuario usuario = usuarioService.buscarPorEmail(loginDTO.getEmail())
-                .orElseThrow(() -> new RuntimeException("Email ou senha inválidos"));
+                .orElseThrow(() -> new NaoAutenticadoException("Email ou senha inválidos"));
 
         // BCrypt compara a senha digitada com o hash armazenado
         boolean senhaCorreta = usuarioService.getPasswordEncoder()
                 .matches(loginDTO.getSenha(), usuario.getSenha());
 
         if (!senhaCorreta) {
-            throw new RuntimeException("Email ou senha inválidos");
+            throw new NaoAutenticadoException("Email ou senha inválidos");
         }
 
         String token = jwtService.generateToken(usuario.getId(), usuario.getNome());

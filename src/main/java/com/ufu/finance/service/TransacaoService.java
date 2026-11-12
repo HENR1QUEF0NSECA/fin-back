@@ -5,13 +5,15 @@ import com.ufu.finance.entity.Categoria;
 import com.ufu.finance.entity.Transacao;
 import com.ufu.finance.entity.Usuario;
 import com.ufu.finance.enums.TipoTransacao;
+import com.ufu.finance.exception.AcessoNegadoException;
+import com.ufu.finance.exception.NaoAutenticadoException;
+import com.ufu.finance.exception.RecursoNaoEncontradoException;
+import com.ufu.finance.exception.RequisicaoInvalidaException;
 import com.ufu.finance.repository.CategoriaRepository;
 import com.ufu.finance.repository.TransacaoRepository;
 import com.ufu.finance.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,10 +42,10 @@ public class TransacaoService {
     /** Cria uma nova transação vinculada ao usuário autenticado */
     public TransacaoResponseDTO criar(TransacaoRequestDTO dto, Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new NaoAutenticadoException("Usuário não encontrado"));
 
         Categoria categoria = categoriaRepository.findById(dto.getIdCategoria())
-                .orElseThrow(() -> new RuntimeException("Categoria não encontrada"));
+                .orElseThrow(() -> new RequisicaoInvalidaException("Categoria não encontrada"));
 
         Transacao transacao = new Transacao();
         transacao.setUsuario(usuario);
@@ -73,10 +75,10 @@ public class TransacaoService {
     /** Remove uma transação — só o dono pode deletar */
     public void deletar(Long idTransacao, Long usuarioId) {
         Transacao transacao = transacaoRepository.findById(idTransacao)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transação não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Transação não encontrada"));
 
         if (!transacao.getUsuario().getId().equals(usuarioId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+            throw new AcessoNegadoException(
                     "Acesso negado: você não pode deletar esta transação");
         }
 
@@ -105,7 +107,6 @@ public class TransacaoService {
 
     /** Transações dentro de um mês/ano */
     public List<TransacaoResponseDTO> listarPorMesAno(Long usuarioId, int mes, int ano) {
-        validarMesAno(mes, ano);
         return transacaoRepository
                 .findByUsuarioIdAndMesAno(usuarioId, mes, ano)
                 .stream()
@@ -116,7 +117,7 @@ public class TransacaoService {
     /** Transações filtradas por intervalo de datas */
     public List<TransacaoResponseDTO> listarPorPeriodo(Long usuarioId, LocalDate inicio, LocalDate fim) {
         if (inicio.isAfter(fim)) {
-            throw new RuntimeException("Data de início não pode ser posterior à data de fim");
+            throw new RequisicaoInvalidaException("Data de início não pode ser posterior à data de fim");
         }
         // dh_transacao é data+hora: vai do início do primeiro dia até o fim do último
         return transacaoRepository
@@ -130,7 +131,7 @@ public class TransacaoService {
     /** Transações por categoria */
     public List<TransacaoResponseDTO> listarPorCategoria(Long usuarioId, Integer categoriaId) {
         categoriaRepository.findById(categoriaId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoria não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Categoria não encontrada"));
 
         return transacaoRepository
                 .findByUsuarioIdAndCategoriaIdOrderByDataHoraTransacaoDesc(usuarioId, categoriaId)
@@ -146,8 +147,6 @@ public class TransacaoService {
      * + breakdown por categoria (para gráfico de pizza)
      */
     public ResumoMensalDTO resumoMensal(Long usuarioId, int mes, int ano) {
-        validarMesAno(mes, ano);
-
         BigDecimal totalReceitas = transacaoRepository
                 .sumByTipoAndMesAno(usuarioId, TipoTransacao.R, mes, ano);
 
@@ -175,8 +174,6 @@ public class TransacaoService {
      * (para gráfico de linha/barras)
      */
     public EvolucaoMensalDTO evolucaoAnual(Long usuarioId, int ano) {
-        validarAno(ano);
-
         List<EvolucaoMensalDTO.PontoMensalDTO> receitas = transacaoRepository
                 .sumPorMesNoAno(usuarioId, TipoTransacao.R, ano)
                 .stream()
@@ -192,20 +189,5 @@ public class TransacaoService {
                 .collect(Collectors.toList());
 
         return new EvolucaoMensalDTO(ano, receitas, despesas);
-    }
-
-    // ─── Helpers ──────────────────────────────────────────────────────────────
-
-    private void validarMesAno(int mes, int ano) {
-        if (mes < 1 || mes > 12) {
-            throw new RuntimeException("Mês inválido, deve ser entre 1 e 12");
-        }
-        validarAno(ano);
-    }
-
-    private void validarAno(int ano) {
-        if (ano < 2000 || ano > LocalDate.now().getYear() + 1) {
-            throw new RuntimeException("Ano inválido");
-        }
     }
 }
