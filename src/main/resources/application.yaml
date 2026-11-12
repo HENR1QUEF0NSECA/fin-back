@@ -1,21 +1,31 @@
+# Configuração base (vale para todos os ambientes).
+#
+# Nada sensível fica neste arquivo: senha do banco e segredo do JWT vêm de
+# variáveis de ambiente. Localmente, elas são lidas do arquivo .env na raiz do
+# projeto (copie o .env.example). No Docker, vêm do docker-compose.yml.
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/finance
-    username: postgres
-    password: thiago
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/finance}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
+    show-sql: false
     defer-datasource-initialization: true
+    # Sem sessão aberta durante a renderização da resposta: cada consulta acontece
+    # dentro do service, e o JSON é montado só a partir dos DTOs.
+    open-in-view: false
+
   sql:
     init:
       mode: always
+      encoding: UTF-8
 
 jwt:
-  secret: fHkl980UGl8cOfVCyfu518RnI37PtZt4C0xbJj1vw4IqdCMWlaXwgv8zGsIY8zxE
-  expiration: 86400000
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}

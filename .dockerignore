@@ -1,0 +1,7 @@
+# Fora da imagem: segredos locais e arquivos gerados.
+.env
+.git
+.gradle
+build
+.idea
+.vscode

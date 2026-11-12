@@ -1,0 +1,8 @@
+# Perfil de desenvolvimento: mostra no log o SQL gerado pelo Hibernate.
+# Ative com: ./gradlew bootRun --args='--spring.profiles.active=dev'
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true

@@ -1,19 +1,21 @@
+# Os valores ${...} vêm do arquivo .env na raiz do projeto (copie o .env.example).
+# Os marcados com "?" são obrigatórios: sem eles o compose para com a mensagem.
 services:
   postgres:
     image: postgres:16-alpine
     container_name: finance-app-db
     environment:
       POSTGRES_DB: finance
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no arquivo .env}
     ports:
       # Porta no seu computador. Se já tiver um Postgres local na 5432,
-      # rode com POSTGRES_PORT=5433 (a API no Docker não é afetada).
+      # defina POSTGRES_PORT no .env (a API no Docker não é afetada).
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,11 +31,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/finance
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres123
-      JWT_SECRET: fHkl980UGl8cOfVCyfu518RnI37PtZt4C0xbJj1vw4IqdCMWlaXwgv8zGsIY8zxE
-      JWT_EXPIRATION: 86400000
+      DB_URL: jdbc:postgresql://postgres:5432/finance
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no arquivo .env}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no arquivo .env}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -46,4 +48,3 @@ volumes:
 networks:
   finance-network:
     driver: bridge
-
