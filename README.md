@@ -227,7 +227,7 @@ Realiza autenticação e retorna token JWT.
 }
 ```
 
-#### Response (201 Created)
+#### Response (200 OK)
 
 ```json
 {
@@ -245,14 +245,13 @@ Realiza autenticação e retorna token JWT.
 
 #### Exemplos de Erro
 
-**400 Bad Request** - Email ou senha inválidos
+**401 Unauthorized** - Email ou senha inválidos (a mensagem não revela qual dos dois errou)
 
 ```json
 {
-  "timestamp": "2025-02-15T10:30:00",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Email ou senha inválidos"
+  "status": 401,
+  "erro": "Email ou senha inválidos",
+  "timestamp": "2025-02-15T10:30:00"
 }
 ```
 
@@ -290,19 +289,31 @@ Cadastra um novo usuário (rota pública).
 #### Validações
 
 - `nome`: obrigatório, 3-100 caracteres
-- `email`: obrigatório, deve ser válido e único
-- `senha`: obrigatória, não vazia
+- `email`: obrigatório, válido, até 150 caracteres e único (sem diferenciar maiúsculas: é gravado em minúsculas)
+- `senha`: obrigatória, 6-72 caracteres (o BCrypt só considera os primeiros 72 bytes)
 
 #### Exemplos de Erro
 
-**400 Bad Request** - Email já cadastrado
+**400 Bad Request** - Campos inválidos
 
 ```json
 {
-  "timestamp": "2025-02-15T10:30:00",
   "status": 400,
-  "error": "Bad Request",
-  "message": "Email já está registrado"
+  "erro": "Dados inválidos",
+  "campos": {
+    "senha": "Senha deve ter entre 6 e 72 caracteres"
+  },
+  "timestamp": "2025-02-15T10:30:00"
+}
+```
+
+**409 Conflict** - Email já cadastrado
+
+```json
+{
+  "status": 409,
+  "erro": "Email já está em uso",
+  "timestamp": "2025-02-15T10:30:00"
 }
 ```
 
@@ -422,13 +433,18 @@ Cria uma nova transação para o usuário autenticado.
 | `valor` | obrigatório, > 0, máx 10 dígitos inteiros + 2 decimais |
 | `idCategoria` | obrigatório, deve existir |
 | `descricao` | opcional, máx 255 caracteres |
-| `dataTransacao` | obrigatório (formato: YYYY-MM-DD) |
 
-**Importante:** O campo `dataTransacao` não está no DTO por padrão. Você precisa adicionar:
+A data/hora não é enviada: o back grava o momento da criação (`dataHoraTransacao`).
 
-```java
-@DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-private LocalDate dataTransacao;
+Um valor com tipo errado (ex.: `"tipo": "X"` ou `"valor": "abc"`) também volta como erro de campo:
+
+```json
+{
+  "status": 400,
+  "erro": "Dados inválidos",
+  "campos": { "tipo": "Valor inválido. Valores aceitos: R, D" },
+  "timestamp": "2025-02-15T10:30:00"
+}
 ```
 
 ---
@@ -795,8 +811,8 @@ Utilizado no registro de novos usuários.
 | Campo | Tipo | Validação | Descrição |
 |-------|------|-----------|-----------|
 | nome | String | obrigatório, 3-100 caracteres | Nome completo |
-| email | String | obrigatório, email válido, único | E-mail |
-| senha | String | obrigatória | Senha (será hasheada) |
+| email | String | obrigatório, email válido, máx 150, único | E-mail (gravado em minúsculas) |
+| senha | String | obrigatória, 6-72 caracteres | Senha (será hasheada) |
 
 ---
 
@@ -1031,11 +1047,47 @@ Salvo no banco como `VARCHAR(1)` com valores 'R' ou 'D'.
 | 200 | OK | Requisição bem-sucedida |
 | 201 | Created | Recurso criado com sucesso |
 | 204 | No Content | Sucesso, sem conteúdo (deletar) |
-| 400 | Bad Request | Dados inválidos ou incompletos |
-| 401 | Unauthorized | Token ausente ou inválido |
-| 403 | Forbidden | Sem permissão para acessar |
-| 404 | Not Found | Recurso não encontrado |
-| 500 | Internal Server Error | Erro no servidor |
+| 400 | Bad Request | Dados inválidos, incompletos ou JSON mal formado |
+| 401 | Unauthorized | Token ausente/inválido ou login com email/senha errados |
+| 403 | Forbidden | O recurso pertence a outro usuário |
+| 404 | Not Found | Recurso ou rota não encontrados |
+| 405 | Method Not Allowed | Método HTTP não aceito pela rota (header `Allow` lista os aceitos) |
+| 409 | Conflict | Dado duplicado (email já usado, orçamento repetido no mês) |
+| 415 | Unsupported Media Type | Corpo enviado sem `Content-Type: application/json` |
+| 500 | Internal Server Error | Erro inesperado no servidor (detalhe só no log) |
+
+### Formato das respostas de erro
+
+Todo erro, inclusive o 401 do filtro JWT, sai do `GlobalExceptionHandler` no mesmo formato:
+
+```json
+{
+  "status": 400,
+  "erro": "Dados inválidos",
+  "campos": {
+    "mes": "Mês deve ser entre 1 e 12",
+    "ano": "Ano deve ser entre 2000 e 2100"
+  },
+  "timestamp": "2025-02-15T10:30:00"
+}
+```
+
+- `erro`: mensagem em português, pronta para mostrar ao usuário.
+- `campos`: só em erro de validação, com uma mensagem por campo (do body ou da query).
+- Nunca expõe SQL, nomes de classes Java ou stack trace.
+
+Os services lançam exceções próprias (pacote `exception`), e o status vem do tipo da exceção:
+
+| Exceção | Status |
+|---------|--------|
+| `RequisicaoInvalidaException` | 400 |
+| `NaoAutenticadoException` | 401 |
+| `AcessoNegadoException` | 403 |
+| `RecursoNaoEncontradoException` | 404 |
+| `ConflitoException` | 409 |
+
+Mês e ano são validados pelas anotações `@Mes` (1 a 12) e `@Ano` (2000 a 2100), do pacote
+`validation`, tanto no body dos orçamentos quanto nos parâmetros `?mes=` e `?ano=`.
 
 ---
 
