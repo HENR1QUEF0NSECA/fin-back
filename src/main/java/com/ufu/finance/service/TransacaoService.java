@@ -12,7 +12,7 @@ import com.ufu.finance.exception.RequisicaoInvalidaException;
 import com.ufu.finance.repository.CategoriaRepository;
 import com.ufu.finance.repository.TransacaoRepository;
 import com.ufu.finance.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,19 +23,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class TransacaoService {
 
-    @Autowired
-    private TransacaoRepository transacaoRepository;
+    private final TransacaoRepository transacaoRepository;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    @Autowired
-    private CategoriaRepository categoriaRepository;
+    private final CategoriaRepository categoriaRepository;
 
-    @Autowired
-    private OrcamentoService orcamentoService;
+    private final OrcamentoService orcamentoService;
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
 
@@ -44,7 +41,7 @@ public class TransacaoService {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new NaoAutenticadoException("Usuário não encontrado"));
 
-        Categoria categoria = categoriaRepository.findById(dto.getIdCategoria())
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
                 .orElseThrow(() -> new RequisicaoInvalidaException("Categoria não encontrada"));
 
         Transacao transacao = new Transacao();
@@ -63,7 +60,7 @@ public class TransacaoService {
         if (saved.getTipo() == TipoTransacao.D) {
             LocalDateTime dh = saved.getDataHoraTransacao();
             boolean alerta = orcamentoService.shouldAlert(
-                    usuarioId, dto.getIdCategoria(), dh.getMonthValue(), dh.getYear());
+                    usuarioId, dto.getCategoriaId(), dh.getMonthValue(), dh.getYear());
             response.setAlertaOrcamento(alerta);
         } else {
             response.setAlertaOrcamento(false);

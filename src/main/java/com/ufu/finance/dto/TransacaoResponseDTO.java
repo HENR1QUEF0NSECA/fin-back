@@ -9,13 +9,17 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Transação como sai na API. Segue o mesmo padrão de nomes do orçamento:
+ * "id" para o próprio registro e "usuarioId"/"categoriaId" para as referências.
+ */
 @Data
 @NoArgsConstructor
 public class TransacaoResponseDTO {
 
-    private Long idTransacao;
-    private Long idUsuario;
-    private Integer idCategoria;
+    private Long id;
+    private Long usuarioId;
+    private Integer categoriaId;
     private String nomeCategoria;
     private BigDecimal valor;
     private LocalDateTime dataHoraTransacao;
@@ -24,7 +28,7 @@ public class TransacaoResponseDTO {
     private String tipoDescricao; // "Receita" ou "Despesa"
 
     /**
-     * Alerta de orçamento (RF10). Populado APENAS em POST /api/transaction —
+     * Alerta de orçamento (RF10). Populado APENAS em POST /api/transacoes —
      * nas listagens o campo é null e omitido do JSON via @JsonInclude.
      * true → essa transação fez o gasto na categoria/mês atingir >= 80% do limite.
      */
@@ -32,9 +36,9 @@ public class TransacaoResponseDTO {
     private Boolean alertaOrcamento;
 
     public TransacaoResponseDTO(Transacao t) {
-        this.idTransacao   = t.getId();
-        this.idUsuario     = t.getUsuario().getId();
-        this.idCategoria   = t.getCategoria().getId();
+        this.id            = t.getId();
+        this.usuarioId     = t.getUsuario().getId();
+        this.categoriaId   = t.getCategoria().getId();
         this.nomeCategoria = t.getCategoria().getNome();
         this.valor         = t.getValor();
         this.dataHoraTransacao = t.getDataHoraTransacao();

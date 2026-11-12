@@ -1,9 +1,8 @@
 package com.ufu.finance.controller;
 
-import com.ufu.finance.entity.Categoria;
-import com.ufu.finance.repository.CategoriaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
+import com.ufu.finance.dto.CategoriaResponseDTO;
+import com.ufu.finance.service.CategoriaService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,14 +15,17 @@ import java.util.List;
  * Populadas via src/main/resources/data.sql na inicialização.
  */
 @RestController
-@RequestMapping("/api/categoria")
+@RequestMapping("/api/categorias")
+@RequiredArgsConstructor
 public class CategoriaController {
 
-    @Autowired
-    private CategoriaRepository categoriaRepository;
+    private final CategoriaService categoriaService;
 
+    /**
+     * GET /api/categorias
+     */
     @GetMapping
-    public ResponseEntity<List<Categoria>> listar() {
-        return ResponseEntity.ok(categoriaRepository.findAll(Sort.by("nome")));
+    public ResponseEntity<List<CategoriaResponseDTO>> listar() {
+        return ResponseEntity.ok(categoriaService.listar());
     }
 }

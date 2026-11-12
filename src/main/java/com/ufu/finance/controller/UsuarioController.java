@@ -1,60 +1,31 @@
 package com.ufu.finance.controller;
 
-import com.ufu.finance.dto.UserDTO;
-import com.ufu.finance.dto.UserResponseDTO;
+import com.ufu.finance.dto.UsuarioResponseDTO;
 import com.ufu.finance.service.UsuarioService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
-
+/**
+ * Dados do usuário logado. Não há rota para listar ou consultar outros
+ * usuários: cada um só enxerga os próprios dados.
+ */
 @RestController
-@RequestMapping("/api/users")
-public class UserController {
+@RequestMapping("/api/usuarios")
+@RequiredArgsConstructor
+public class UsuarioController {
 
-    @Autowired
-    private UsuarioService usuarioService;
-
-    /**
-     * Cadastra um novo usuário (rota pública).
-     */
-    @PostMapping("/register")
-    public ResponseEntity<UserResponseDTO> cadastrarUsuario(@Valid @RequestBody UserDTO userDTO) {
-        UserResponseDTO user = usuarioService.cadastrarUsuario(userDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(user);
-    }
+    private final UsuarioService usuarioService;
 
     /**
-     * Busca usuário por ID (requer autenticação)
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> buscarUsuario(@PathVariable Long id) {
-        UserResponseDTO user = usuarioService.buscarPorId(id);
-        return ResponseEntity.ok(user);
-    }
-
-    /**
-     * Lista todos os usuários (requer autenticação)
-     */
-    @GetMapping
-    public ResponseEntity<List<UserResponseDTO>> listarUsuarios() {
-        return ResponseEntity.ok(usuarioService.listarTodos());
-    }
-
-    /**
-     * Retorna id e nome extraídos do token pelo filtro JWT
+     * GET /api/usuarios/me
+     * Retorna os dados do usuário dono do token.
      */
     @GetMapping("/me")
-    public ResponseEntity<Map<String, Object>> usuarioLogado(HttpServletRequest request) {
-        return ResponseEntity.ok(Map.of(
-                "userId", request.getAttribute("userId"),
-                "nome",   request.getAttribute("nome"),
-                "mensagem", "Você está autenticado!"
-        ));
+    public ResponseEntity<UsuarioResponseDTO> usuarioLogado(@RequestAttribute Long usuarioId) {
+        return ResponseEntity.ok(usuarioService.buscarUsuarioLogado(usuarioId));
     }
 }

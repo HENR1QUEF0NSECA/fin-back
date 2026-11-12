@@ -5,9 +5,8 @@ import com.ufu.finance.dto.OrcamentoResponseDTO;
 import com.ufu.finance.service.OrcamentoService;
 import com.ufu.finance.validation.Ano;
 import com.ufu.finance.validation.Mes;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,10 +18,10 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/orcamentos")
+@RequiredArgsConstructor
 public class OrcamentoController {
 
-    @Autowired
-    private OrcamentoService orcamentoService;
+    private final OrcamentoService orcamentoService;
 
     /**
      * POST /api/orcamentos
@@ -30,7 +29,7 @@ public class OrcamentoController {
      *
      * Body:
      * {
-     *   "idCategoria": 1,
+     *   "categoriaId": 1,
      *   "mes": 2,
      *   "ano": 2025,
      *   "limite": 500.00
@@ -39,9 +38,7 @@ public class OrcamentoController {
     @PostMapping
     public ResponseEntity<OrcamentoResponseDTO> criar(
             @Valid @RequestBody OrcamentoRequestDTO dto,
-            HttpServletRequest request) {
-
-        Long usuarioId = (Long) request.getAttribute("userId");
+            @RequestAttribute Long usuarioId) {
         OrcamentoResponseDTO response = orcamentoService.criar(dto, usuarioId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -51,8 +48,7 @@ public class OrcamentoController {
      * Lista todos os orçamentos do usuário autenticado.
      */
     @GetMapping
-    public ResponseEntity<List<OrcamentoResponseDTO>> listar(HttpServletRequest request) {
-        Long usuarioId = (Long) request.getAttribute("userId");
+    public ResponseEntity<List<OrcamentoResponseDTO>> listar(@RequestAttribute Long usuarioId) {
         List<OrcamentoResponseDTO> orcamentos = orcamentoService.listarOrcamentosDoUsuario(usuarioId);
         return ResponseEntity.ok(orcamentos);
     }
@@ -64,9 +60,7 @@ public class OrcamentoController {
     @GetMapping("/{id}")
     public ResponseEntity<OrcamentoResponseDTO> buscarPorId(
             @PathVariable Long id,
-            HttpServletRequest request) {
-
-        Long usuarioId = (Long) request.getAttribute("userId");
+            @RequestAttribute Long usuarioId) {
         OrcamentoResponseDTO orcamento = orcamentoService.buscarPorId(id, usuarioId);
         return ResponseEntity.ok(orcamento);
     }
@@ -79,9 +73,7 @@ public class OrcamentoController {
     public ResponseEntity<OrcamentoResponseDTO> atualizar(
             @PathVariable Long id,
             @Valid @RequestBody OrcamentoRequestDTO dto,
-            HttpServletRequest request) {
-
-        Long usuarioId = (Long) request.getAttribute("userId");
+            @RequestAttribute Long usuarioId) {
         OrcamentoResponseDTO response = orcamentoService.atualizar(id, dto, usuarioId);
         return ResponseEntity.ok(response);
     }
@@ -93,9 +85,7 @@ public class OrcamentoController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(
             @PathVariable Long id,
-            HttpServletRequest request) {
-
-        Long usuarioId = (Long) request.getAttribute("userId");
+            @RequestAttribute Long usuarioId) {
         orcamentoService.deletar(id, usuarioId);
         return ResponseEntity.noContent().build();
     }
@@ -108,27 +98,23 @@ public class OrcamentoController {
     public ResponseEntity<List<OrcamentoResponseDTO>> listarPorMes(
             @RequestParam @Mes int mes,
             @RequestParam @Ano int ano,
-            HttpServletRequest request) {
-
-        Long usuarioId = (Long) request.getAttribute("userId");
+            @RequestAttribute Long usuarioId) {
         List<OrcamentoResponseDTO> orcamentos = orcamentoService.listarOrcamentosMes(usuarioId, mes, ano);
         return ResponseEntity.ok(orcamentos);
     }
 
     /**
-     * GET /api/orcamentos/categoria/{idCategoria}/mes?mes=2&ano=2025
+     * GET /api/orcamentos/categoria/{categoriaId}/mes?mes=2&ano=2025
      * Busca orçamento de uma categoria em um mês específico.
      */
-    @GetMapping("/categoria/{idCategoria}/mes")
+    @GetMapping("/categoria/{categoriaId}/mes")
     public ResponseEntity<OrcamentoResponseDTO> buscarPorCategoriaMes(
-            @PathVariable Integer idCategoria,
+            @PathVariable Integer categoriaId,
             @RequestParam @Mes int mes,
             @RequestParam @Ano int ano,
-            HttpServletRequest request) {
-
-        Long usuarioId = (Long) request.getAttribute("userId");
+            @RequestAttribute Long usuarioId) {
         OrcamentoResponseDTO orcamento = orcamentoService
-                .buscarOrcamentoCategoriaMes(usuarioId, idCategoria, mes, ano);
+                .buscarOrcamentoCategoriaMes(usuarioId, categoriaId, mes, ano);
         return ResponseEntity.ok(orcamento);
     }
 }

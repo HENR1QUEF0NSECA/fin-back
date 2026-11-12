@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 public class OrcamentoRequestDTO {
 
     @NotNull(message = "Categoria é obrigatória")
-    private Integer idCategoria;
+    private Integer categoriaId;
 
     @NotNull(message = "Mês é obrigatório")
     @Mes

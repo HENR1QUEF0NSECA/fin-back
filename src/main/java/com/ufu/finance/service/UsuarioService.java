@@ -1,25 +1,23 @@
 package com.ufu.finance.service;
 
-import com.ufu.finance.dto.UserDTO;
-import com.ufu.finance.dto.UserResponseDTO;
+import com.ufu.finance.dto.UsuarioRequestDTO;
+import com.ufu.finance.dto.UsuarioResponseDTO;
 import com.ufu.finance.entity.Usuario;
 import com.ufu.finance.exception.ConflitoException;
-import com.ufu.finance.exception.RecursoNaoEncontradoException;
+import com.ufu.finance.exception.NaoAutenticadoException;
 import com.ufu.finance.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class UsuarioService {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
 
     // BCrypt com força 12 (padrão é 10; 12 é mais seguro sem impacto perceptível)
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(12);
@@ -34,40 +32,30 @@ public class UsuarioService {
     /**
      * Cadastra um novo usuário com senha criptografada
      */
-    public UserResponseDTO cadastrarUsuario(UserDTO userDTO) {
+    public UsuarioResponseDTO cadastrarUsuario(UsuarioRequestDTO dto) {
         // Checa com o e-mail já normalizado, igual ao que é gravado. Antes a checagem
         // usava o e-mail como veio: "Ana@x.com" passava e estourava a unique do banco.
-        String email = normalizarEmail(userDTO.getEmail());
+        String email = normalizarEmail(dto.getEmail());
         if (usuarioRepository.existsByEmail(email)) {
             throw new ConflitoException("Email já está em uso");
         }
 
         Usuario usuario = new Usuario();
-        usuario.setNome(userDTO.getNome().trim());
+        usuario.setNome(dto.getNome().trim());
         usuario.setEmail(email);
-        usuario.setSenha(passwordEncoder.encode(userDTO.getSenha())); // 🔒 hash BCrypt
+        usuario.setSenha(passwordEncoder.encode(dto.getSenha())); // 🔒 hash BCrypt
 
-        Usuario savedUsuario = usuarioRepository.save(usuario);
-        return new UserResponseDTO(savedUsuario);
+        return new UsuarioResponseDTO(usuarioRepository.save(usuario));
     }
 
     /**
-     * Busca um usuário por ID
+     * Dados do usuário dono do token. Se ele não existe mais, o token não vale:
+     * 401, e não 404.
      */
-    public UserResponseDTO buscarPorId(Long id) {
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
-        return new UserResponseDTO(usuario);
-    }
-
-    /**
-     * Lista todos os usuários
-     */
-    public List<UserResponseDTO> listarTodos() {
-        return usuarioRepository.findAll()
-                .stream()
-                .map(UserResponseDTO::new)
-                .collect(Collectors.toList());
+    public UsuarioResponseDTO buscarUsuarioLogado(Long usuarioId) {
+        return usuarioRepository.findById(usuarioId)
+                .map(UsuarioResponseDTO::new)
+                .orElseThrow(() -> new NaoAutenticadoException("Usuário não encontrado"));
     }
 
     /**

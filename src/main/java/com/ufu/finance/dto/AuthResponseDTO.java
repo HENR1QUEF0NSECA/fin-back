@@ -1,20 +1,11 @@
 package com.ufu.finance.dto;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
+/**
+ * Resposta do login: o token JWT e quem é o usuário.
+ */
+public record AuthResponseDTO(String token, String tipo, Long usuarioId, String nome) {
 
-@Data
-@NoArgsConstructor
-public class AuthResponseDTO {
-    
-    private String token;
-    private String tipo = "Bearer";
-    private Long userId;
-    private String nome;
-    
-    public AuthResponseDTO(String token, Long userId, String nome) {
-        this.token = token;
-        this.userId = userId;
-        this.nome = nome;
+    public AuthResponseDTO(String token, Long usuarioId, String nome) {
+        this(token, "Bearer", usuarioId, nome);
     }
 }

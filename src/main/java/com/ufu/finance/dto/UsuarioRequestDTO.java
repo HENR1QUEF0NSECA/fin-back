@@ -6,9 +6,12 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Corpo do cadastro de usuário (POST /api/auth/registro).
+ */
 @Data
 @NoArgsConstructor
-public class UserDTO {
+public class UsuarioRequestDTO {
 
     @NotBlank(message = "Nome é obrigatório")
     @Size(min = 3, max = 100, message = "Nome deve ter entre 3 e 100 caracteres")

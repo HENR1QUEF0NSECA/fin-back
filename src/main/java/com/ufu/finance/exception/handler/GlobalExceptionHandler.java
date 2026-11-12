@@ -94,14 +94,14 @@ public class GlobalExceptionHandler {
                 "Corpo da requisição ausente ou mal formatado: envie um JSON válido", null);
     }
 
-    /** Parâmetro obrigatório ausente, ex.: GET /api/transaction/mes sem ?mes= */
+    /** Parâmetro obrigatório ausente, ex.: GET /api/transacoes/mes sem ?mes= */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<Map<String, Object>> handleParametroAusente(MissingServletRequestParameterException ex) {
         return resposta(HttpStatus.BAD_REQUEST,
                 "Parâmetro obrigatório ausente: " + ex.getParameterName(), null);
     }
 
-    /** Valor com tipo errado na URL, ex.: /api/orcamentos/abc ou /api/transaction/tipo/X */
+    /** Valor com tipo errado na URL, ex.: /api/orcamentos/abc ou /api/transacoes/tipo/X */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, Object>> handleTipoInvalido(MethodArgumentTypeMismatchException ex) {
         return resposta(HttpStatus.BAD_REQUEST,

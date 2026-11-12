@@ -16,9 +16,9 @@ public interface OrcamentoRepository extends JpaRepository<Orcamento, Long> {
 
     /** Orçamento específico (usuário, categoria, mês, ano) — chave de negócio única. */
     Optional<Orcamento> findByUsuarioIdAndCategoriaIdAndMesAndAno(
-            Long usuarioId, Integer idCategoria, Integer mes, Integer ano);
+            Long usuarioId, Integer categoriaId, Integer mes, Integer ano);
 
     /** Verifica existência da chave única — usado pra retornar 409 no criar(). */
     boolean existsByUsuarioIdAndCategoriaIdAndMesAndAno(
-            Long usuarioId, Integer idCategoria, Integer mes, Integer ano);
+            Long usuarioId, Integer categoriaId, Integer mes, Integer ano);
 }

@@ -5,17 +5,15 @@ import com.ufu.finance.dto.LoginDTO;
 import com.ufu.finance.entity.Usuario;
 import com.ufu.finance.exception.NaoAutenticadoException;
 import com.ufu.finance.service.UsuarioService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
-    @Autowired
-    private UsuarioService usuarioService;
-
-    @Autowired
-    private JwtService jwtService;
+    private final UsuarioService usuarioService;
+    private final JwtService jwtService;
 
     /**
      * Realiza o login do usuário e retorna o token JWT.

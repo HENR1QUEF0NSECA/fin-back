@@ -14,17 +14,21 @@ import java.util.Map;
 
 @Service
 public class JwtService {
-    
-    @Value("${jwt.secret}")
-    private String secret;
-    
-    @Value("${jwt.expiration}")
-    private Long expiration;
-    
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+
+    private final SecretKey signingKey;
+    private final long expiration;
+
+    /**
+     * O segredo vem da variável de ambiente JWT_SECRET. A chave é montada uma vez
+     * só, aqui: se o segredo tiver menos de 32 bytes, a API nem sobe (o jjwt
+     * recusa chaves fracas para HS256), em vez de falhar no primeiro login.
+     */
+    public JwtService(@Value("${jwt.secret}") String secret,
+                      @Value("${jwt.expiration}") long expiration) {
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expiration = expiration;
     }
-    
+
     /**
      * Gera um token JWT com id e nome do usuário
      */
@@ -32,16 +36,16 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("nome", nome);
-        
+
         Date now = new Date();
         Date expirationDate = new Date(now.getTime() + expiration);
-        
+
         return Jwts.builder()
                 .claims(claims)
                 .subject(userId.toString())
                 .issuedAt(now)
                 .expiration(expirationDate)
-                .signWith(getSigningKey(), Jwts.SIG.HS256)
+                .signWith(signingKey, Jwts.SIG.HS256)
                 .compact();
     }
 
@@ -51,12 +55,12 @@ public class JwtService {
      */
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
-    
+
     /**
      * Extrai o ID do usuário do token
      */
@@ -64,7 +68,7 @@ public class JwtService {
         Claims claims = extractAllClaims(token);
         return claims.get("userId", Long.class);
     }
-    
+
     /**
      * Extrai o nome do usuário do token
      */
@@ -72,7 +76,7 @@ public class JwtService {
         Claims claims = extractAllClaims(token);
         return claims.get("nome", String.class);
     }
-    
+
     /**
      * Valida o token. O jjwt já rejeita token expirado ou com assinatura
      * inválida durante o parse, então basta tentar extrair as claims.

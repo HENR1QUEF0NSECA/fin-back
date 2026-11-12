@@ -65,14 +65,14 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
     @Query("""
             SELECT COALESCE(SUM(t.valor), 0) FROM Transacao t
             WHERE t.usuario.id = :usuarioId
-              AND t.categoria.id = :idCategoria
+              AND t.categoria.id = :categoriaId
               AND t.tipo = :tipo
               AND MONTH(t.dataHoraTransacao) = :mes
               AND YEAR(t.dataHoraTransacao)  = :ano
             """)
     BigDecimal sumByCategoriaTipoMesAno(
             @Param("usuarioId") Long usuarioId,
-            @Param("idCategoria") Integer idCategoria,
+            @Param("categoriaId") Integer categoriaId,
             @Param("tipo") TipoTransacao tipo,
             @Param("mes") int mes,
             @Param("ano") int ano);

@@ -15,7 +15,7 @@ import com.ufu.finance.repository.CategoriaRepository;
 import com.ufu.finance.repository.OrcamentoRepository;
 import com.ufu.finance.repository.TransacaoRepository;
 import com.ufu.finance.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -29,26 +29,23 @@ import java.util.stream.Collectors;
  * Decisões de negócio (validadas com o time em 2026-06-12):
  *  - Unicidade: 1 orçamento por (usuário, categoria, mês, ano) → 409 ao duplicar
  *  - Threshold de alerta: gasto/limite >= 80%
- *  - PUT atualiza todos os campos (idCategoria, mês, ano, limite)
+ *  - PUT atualiza todos os campos (categoriaId, mês, ano, limite)
  *  - DELETE livre — transações antigas permanecem, só o limite some
  *  - `consumido` = SUM(transações tipo=D na categoria/mês/ano)
  */
 @Service
+@RequiredArgsConstructor
 public class OrcamentoService {
 
     private static final BigDecimal ALERT_THRESHOLD = new BigDecimal("0.80");
 
-    @Autowired
-    private OrcamentoRepository orcamentoRepository;
+    private final OrcamentoRepository orcamentoRepository;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    @Autowired
-    private CategoriaRepository categoriaRepository;
+    private final CategoriaRepository categoriaRepository;
 
-    @Autowired
-    private TransacaoRepository transacaoRepository;
+    private final TransacaoRepository transacaoRepository;
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
 
@@ -56,11 +53,11 @@ public class OrcamentoService {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new NaoAutenticadoException("Usuário não encontrado"));
 
-        Categoria categoria = categoriaRepository.findById(dto.getIdCategoria())
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
                 .orElseThrow(() -> new RequisicaoInvalidaException("Categoria não encontrada"));
 
         if (orcamentoRepository.existsByUsuarioIdAndCategoriaIdAndMesAndAno(
-                usuarioId, dto.getIdCategoria(), dto.getMes(), dto.getAno())) {
+                usuarioId, dto.getCategoriaId(), dto.getMes(), dto.getAno())) {
             throw new ConflitoException(
                     "Já existe orçamento para esta categoria no mês/ano informado");
         }
@@ -92,17 +89,17 @@ public class OrcamentoService {
 
         // Verifica se a nova combinação (categoria, mês, ano) não colide com outro orçamento.
         boolean mudouChave =
-                !orcamento.getCategoria().getId().equals(dto.getIdCategoria())
+                !orcamento.getCategoria().getId().equals(dto.getCategoriaId())
                         || !orcamento.getMes().equals(dto.getMes())
                         || !orcamento.getAno().equals(dto.getAno());
 
         if (mudouChave && orcamentoRepository.existsByUsuarioIdAndCategoriaIdAndMesAndAno(
-                usuarioId, dto.getIdCategoria(), dto.getMes(), dto.getAno())) {
+                usuarioId, dto.getCategoriaId(), dto.getMes(), dto.getAno())) {
             throw new ConflitoException(
                     "Já existe orçamento para esta categoria no mês/ano informado");
         }
 
-        Categoria categoria = categoriaRepository.findById(dto.getIdCategoria())
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
                 .orElseThrow(() -> new RequisicaoInvalidaException("Categoria não encontrada"));
 
         orcamento.setCategoria(categoria);
@@ -139,9 +136,9 @@ public class OrcamentoService {
     }
 
     public OrcamentoResponseDTO buscarOrcamentoCategoriaMes(
-            Long usuarioId, Integer idCategoria, int mes, int ano) {
+            Long usuarioId, Integer categoriaId, int mes, int ano) {
         Orcamento orcamento = orcamentoRepository
-                .findByUsuarioIdAndCategoriaIdAndMesAndAno(usuarioId, idCategoria, mes, ano)
+                .findByUsuarioIdAndCategoriaIdAndMesAndAno(usuarioId, categoriaId, mes, ano)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Orçamento não encontrado para esta categoria/mês"));
         return montarResponse(orcamento);
@@ -150,18 +147,18 @@ public class OrcamentoService {
     // ─── Helper público pra TransacaoService (RF10) ───────────────────────────
 
     /**
-     * Decide se o POST /api/transaction deve devolver {@code alertaOrcamento: true}.
+     * Decide se o POST /api/transacoes deve devolver {@code alertaOrcamento: true}.
      * True quando existe orçamento pra (categoria, mês, ano) E o gasto acumulado
      * (já incluindo a transação recém-salva) >= 80% do limite.
      * Quando não há orçamento, retorna false (decisão de negócio #5).
      */
-    public boolean shouldAlert(Long usuarioId, Integer idCategoria, int mes, int ano) {
+    public boolean shouldAlert(Long usuarioId, Integer categoriaId, int mes, int ano) {
         return orcamentoRepository
-                .findByUsuarioIdAndCategoriaIdAndMesAndAno(usuarioId, idCategoria, mes, ano)
+                .findByUsuarioIdAndCategoriaIdAndMesAndAno(usuarioId, categoriaId, mes, ano)
                 .map(orcamento -> {
                     BigDecimal limite = orcamento.getLimite();
                     if (limite == null || limite.signum() <= 0) return false;
-                    BigDecimal consumido = consumidoNoMes(usuarioId, idCategoria, mes, ano);
+                    BigDecimal consumido = consumidoNoMes(usuarioId, categoriaId, mes, ano);
                     BigDecimal threshold = limite.multiply(ALERT_THRESHOLD);
                     return consumido.compareTo(threshold) >= 0;
                 })
@@ -191,9 +188,9 @@ public class OrcamentoService {
         return dto;
     }
 
-    private BigDecimal consumidoNoMes(Long usuarioId, Integer idCategoria, int mes, int ano) {
+    private BigDecimal consumidoNoMes(Long usuarioId, Integer categoriaId, int mes, int ano) {
         BigDecimal soma = transacaoRepository.sumByCategoriaTipoMesAno(
-                usuarioId, idCategoria, TipoTransacao.D, mes, ano);
+                usuarioId, categoriaId, TipoTransacao.D, mes, ano);
         return soma != null ? soma : BigDecimal.ZERO;
     }
 }

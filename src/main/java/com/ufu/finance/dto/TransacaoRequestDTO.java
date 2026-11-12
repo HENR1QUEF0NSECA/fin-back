@@ -22,8 +22,8 @@ public class TransacaoRequestDTO {
     @Digits(integer = 10, fraction = 2, message = "Valor deve ter no máximo 10 dígitos inteiros e 2 decimais")
     private BigDecimal valor;
 
-    @NotNull(message = "Id da categoria é obrigatório")
-    private Integer idCategoria;
+    @NotNull(message = "Categoria é obrigatória")
+    private Integer categoriaId;
 
     @Size(max = 255, message = "Descrição deve ter no máximo 255 caracteres")
     private String descricao;
