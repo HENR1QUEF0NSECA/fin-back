@@ -33,19 +33,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
         
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"erro\": \"Token não fornecido\"}");
+            responderNaoAutorizado(response, "Token não fornecido");
             return;
         }
-        
+
         String token = authHeader.substring(7);
-        
+
         // Validar o token
         if (!jwtService.validateToken(token)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"erro\": \"Token inválido ou expirado\"}");
+            responderNaoAutorizado(response, "Token inválido ou expirado");
             return;
         }
         
@@ -58,5 +54,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         // Continuar com a requisição
         filterChain.doFilter(request, response);
+    }
+
+    private void responderNaoAutorizado(HttpServletResponse response, String mensagem) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        // Sem o charset, o servlet escreve em ISO-8859-1 e o "ã"/"á" chegam
+        // quebrados no front, que lê o JSON como UTF-8.
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"erro\": \"" + mensagem + "\"}");
     }
 }
