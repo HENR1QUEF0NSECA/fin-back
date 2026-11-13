@@ -21,13 +21,11 @@ Outro serviço PostgreSQL já está rodando na porta 5432
 ```
 **Soluções:**
 
-A) Usar outra porta - edite `docker-compose.yml`:
-```yaml
-services:
-  postgres:
-    ports:
-      - "5433:5432"  # Mude para 5433
+A) Usar outra porta - defina no `.env` (o `docker-compose.yml` lê esse valor):
+```env
+POSTGRES_PORT=5433
 ```
+A API dentro do Docker continua usando a porta interna 5432. Se você roda a API fora do Docker, ajuste também o `DB_URL` (`jdbc:postgresql://localhost:5433/finance`).
 
 B) Parar o serviço existente:
 ```powershell
@@ -54,6 +52,47 @@ services:
 ```
 
 Então acesse: `http://localhost:8081/api`
+
+---
+
+#### ❌ "required variable DB_PASSWORD is missing a value"
+```
+error while interpolating ...: required variable DB_PASSWORD is missing a value: defina DB_PASSWORD no arquivo .env
+```
+**Causa:** o `.env` não existe na raiz do projeto, ou está sem `DB_PASSWORD`/`JWT_SECRET` (os dois são obrigatórios no `docker-compose.yml`).
+
+**Solução:**
+```powershell
+Copy-Item .env.example .env
+# Edite o .env e preencha DB_PASSWORD e JWT_SECRET
+```
+O `.\docker-start.ps1 up` faz essa cópia sozinho quando o `.env` não existe.
+
+---
+
+#### ❌ "password authentication failed for user "postgres""
+```
+A API não consegue logar no banco
+```
+**Causa:** o Postgres só define a senha na **primeira** criação do volume. Se o volume `postgres_data` foi criado com outra senha (por exemplo, a de uma versão antiga do projeto), mudar o `DB_PASSWORD` no `.env` não altera a senha do banco.
+
+**Soluções:**
+- Use no `DB_PASSWORD` a mesma senha com que o volume foi criado; **ou**
+- Recrie o volume (⚠️ **apaga todos os dados do banco**):
+```powershell
+docker-compose down -v
+docker-compose up --build
+```
+
+---
+
+#### ❌ API não sobe: "Could not resolve placeholder 'JWT_SECRET'" ou "WeakKeyException"
+```
+Faltou variável de ambiente, ou o segredo do JWT é curto demais
+```
+**Soluções:**
+- `Could not resolve placeholder 'JWT_SECRET'` (ou `'DB_PASSWORD'`): a variável não está definida. Ao rodar com `.\gradlew.bat bootRun`, confira se o `.env` está na **raiz do projeto** e se você está rodando o comando a partir dela.
+- `WeakKeyException` / `is not secure enough`: o `JWT_SECRET` tem menos de 32 caracteres. Gere um novo com `openssl rand -base64 48` (no Git Bash) e atualize o `.env`.
 
 ---
 
@@ -111,13 +150,13 @@ O banco será criado automaticamente na primeira execução.
 
 #### ❌ Conectar ao PostgreSQL direto (DBeaver, pgAdmin)
 
-**Detalhes de conexão:**
+**Detalhes de conexão** (valores do seu `.env`):
 ```
 Host: localhost
-Port: 5432
+Port: POSTGRES_PORT (padrão 5432)
 Database: finance
-User: postgres
-Password: postgres123
+User: DB_USERNAME (padrão postgres)
+Password: DB_PASSWORD
 ```
 
 **Teste a conexão:**
@@ -145,8 +184,8 @@ API não está rodando
 # Checar se container está rodando
 docker-compose ps
 
-# Testar se API responde
-curl http://localhost:8080/api/users/register
+# Testar se API responde (sem token, deve voltar 401 em JSON: a API está no ar)
+curl http://localhost:8080/api/categorias
 ```
 
 **Se não responder:** `docker-compose logs app`
@@ -169,6 +208,9 @@ Token ausente, inválido ou expirado
 
 3. **Token inválido:**
    - Verifique se (copiou corretamente - sem espaços extras)
+   - Tokens gerados com outro `JWT_SECRET` deixam de valer: se o segredo do `.env` mudou, faça login de novo
+
+Só `POST /api/auth/login` e `POST /api/auth/registro` funcionam sem token.
 
 ---
 
@@ -190,11 +232,13 @@ A) **Verificar se CORS está ativado:**
 
 B) **Adicionar mais origens** (se necessário):
 ```java
-.allowedOrigins(
-    "http://localhost:4200",
-    "http://localhost:3000",
-    "http://seu-dominio.com"  // Adicione aqui
-)
+config.setAllowedOrigins(List.of(
+        "http://localhost:4200",
+        "http://localhost:3000",
+        "http://127.0.0.1:4200",
+        "http://127.0.0.1:3000",
+        "http://seu-dominio.com"  // Adicione aqui
+));
 ```
 
 C) **Rebuildar a API:**
@@ -205,7 +249,7 @@ docker-compose up --build
 
 D) **Verificar headers de resposta:**
 ```powershell
-curl -i http://localhost:8080/api/users
+curl -i http://localhost:8080/api/categorias -H "Origin: http://localhost:4200"
 # Procure por: Access-Control-Allow-...
 ```
 
@@ -238,7 +282,7 @@ Exemplo de erro:
 
 Teste manualmente:
 ```powershell
-curl -X OPTIONS http://localhost:8080/api/transaction \
+curl -X OPTIONS http://localhost:8080/api/transacoes \
   -H "Origin: http://localhost:4200" \
   -H "Access-Control-Request-Method: GET" \
   -v
@@ -247,7 +291,7 @@ curl -X OPTIONS http://localhost:8080/api/transaction \
 Deve retornar headers como:
 ```
 Access-Control-Allow-Origin: http://localhost:4200
-Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
 ```
 
 ---
@@ -285,12 +329,18 @@ docker stats
 - Query de banco pesada
 
 **Soluções:**
-```powershell
-# Aumentar limites de memória no docker-compose.yml:
+```yaml
+# Aumentar limites de memória no docker-compose.yml.
+# O ENTRYPOINT do Dockerfile não lê JAVA_OPTS; use JAVA_TOOL_OPTIONS, que a JVM lê sozinha:
 services:
   app:
     environment:
-      JAVA_OPTS: "-Xmx1g -Xms512m"
+      JAVA_TOOL_OPTIONS: "-Xmx1g -Xms512m"
+```
+
+Para ver no log o SQL que o Hibernate gera (desligado por padrão), rode a API fora do Docker com o perfil `dev`:
+```powershell
+.\gradlew.bat bootRun --args='--spring.profiles.active=dev'
 ```
 
 ---
@@ -301,10 +351,10 @@ services:
 
 **R:** Via SQL direto no banco:
 ```sql
-INSERT INTO categorias (id, nome) VALUES (8, 'investment') ON CONFLICT (id) DO NOTHING;
+INSERT INTO categorias (id, nome) VALUES (8, 'Investimentos') ON CONFLICT (id) DO NOTHING;
 ```
 
-Ou edite `src/main/resources/data.sql` e reinicie.
+Ou edite `src/main/resources/data.sql` (inclua `(8, 'Investimentos')` seguindo o padrão das outras) e reinicie. Ela passa a aparecer em `GET /api/categorias`.
 
 ---
 
@@ -318,7 +368,7 @@ Ou edite `src/main/resources/data.sql` e reinicie.
    ```
 
 2. **Adicionar endpoint:**
-   - Criar `/api/users/{id}/change-password`
+   - Criar, por exemplo, `PUT /api/usuarios/me/senha` (sempre para o dono do token, nunca por ID)
    - Solicitar senha antiga, validar, atualizar com BCrypt
 
 ---
@@ -340,41 +390,25 @@ docker exec -i finance-app-db psql -U postgres finance < backup.sql
 
 **R:** Sim, mas é necessário:
 1. Adicionar driver no `build.gradle`
-2. Atualizar `application.yaml` com URL/credenciais
-3. Mudar `database-platform` em `application.yaml`
-4. Testar queries SQL (que usam PostgreSQL agora)
+2. Definir `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` no `.env` (o `application.yaml` não precisa ser editado; o Hibernate detecta o dialeto pela conexão)
+3. Revisar o `data.sql`, que usa sintaxe do PostgreSQL (`ON CONFLICT`, `setval`, `pg_get_serial_sequence`)
+4. Testar as consultas
 
-**Exemplo para H2 (em memória, só para testes):**
-```gradle
-runtimeOnly 'com.h2database:h2'
-```
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:h2:mem:finance
-    driver-class-name: org.h2.Driver
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-```
+**H2 (em memória) já é usado nos testes automatizados:** veja `src/test/resources/application-test.yaml` (perfil `test`, com `MODE=PostgreSQL` e `spring.sql.init.mode: never`, porque o `data.sql` é específico do Postgres). O H2 está no `build.gradle` só como dependência de teste (`testRuntimeOnly`).
 
 ---
 
 ### P: O token JWT expira muito rápido/lento. Como mudar?
 
-**R:** Edite `docker-compose.yml`:
-```yaml
-environment:
-  JWT_EXPIRATION: 3600000  # 1 hora (em ms)
-  # 86400000 = 24 horas (padrão)
-  # 604800000 = 7 dias
+**R:** Edite `JWT_EXPIRATION` no `.env` (vale tanto para o Docker quanto para o `bootRun`):
+```env
+# 1 hora (em ms)
+JWT_EXPIRATION=3600000
+# 86400000 = 24 horas (padrão)
+# 604800000 = 7 dias
 ```
 
-Ou edite `application.yaml`:
-```yaml
-jwt:
-  expiration: 3600000
-```
+Depois reinicie a API (no Docker: `docker-compose up -d`).
 
 ---
 
@@ -391,8 +425,9 @@ jwt:
 **Para Railway (5 min):**
 - Push no GitHub
 - Conecte repo em railway.app
-- Railway detecta Spring Boot + cria deploy
-- Pronto! URL públicanastematica
+- Railway detecta o projeto + cria deploy
+- Defina as variáveis `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` e `JWT_EXPIRATION` (veja [RAILWAY_DEPLOY.md](./RAILWAY_DEPLOY.md))
+- Pronto! URL pública na sequência
 
 ---
 
@@ -401,8 +436,8 @@ jwt:
 **R:** Sim:
 1. Instale PostgreSQL 12+
 2. Crie banco: `CREATE DATABASE finance;`
-3. Configure `application.yaml` com credenciais locais
-4. Execute: `.\gradlew.bat bootRun`
+3. Copie o modelo (`Copy-Item .env.example .env`) e preencha no `.env` as credenciais locais (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`) e o `JWT_SECRET`
+4. Execute, a partir da raiz do projeto: `.\gradlew.bat bootRun` (ou com o perfil `dev` para ver o SQL no log: `.\gradlew.bat bootRun --args='--spring.profiles.active=dev'`)
 
 ---
 
@@ -419,26 +454,24 @@ implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.0'
 
 ---
 
-### P: Como adicionar testes unitários?
+### P: Como rodar e adicionar testes?
 
-**R:** Exemplo básico em `src/test/java`:
-```java
-@SpringBootTest
-public class UsuarioServiceTest {
-
-    @Autowired
-    private UsuarioService usuarioService;
-
-    @Test
-    public void testCadastrarUsuario() {
-        UserDTO dto = new UserDTO("João", "joao@test.com", "senha123");
-        UserResponseDTO result = usuarioService.cadastrarUsuario(dto);
-        
-        assertNotNull(result.getId());
-        assertEquals("João", result.getNome());
-    }
-}
+**R:** O projeto já tem 37 testes automatizados em `src/test/java`. Para rodar:
+```powershell
+.\gradlew.bat test
 ```
+Eles **não precisam de PostgreSQL, Docker nem `.env`**: usam o perfil `test`, com H2 em memória (`src/test/resources/application-test.yaml`). Sem JDK instalado, rode com Docker:
+```powershell
+docker run --rm -v "${PWD}:/app" -w /app gradle:8-jdk21-alpine gradle test --no-daemon
+```
+
+Para escrever um teste novo, use os existentes como modelo:
+- **Ponta a ponta (HTTP + banco H2):** `com/ufu/finance/ApiIntegracaoTest.java` (`@SpringBootTest`, `@AutoConfigureMockMvc`, `@ActiveProfiles("test")`)
+- **Unitário de service com Mockito:** `com/ufu/finance/service/UsuarioServiceTest.java`, `OrcamentoServiceTest.java`, `TransacaoServiceTest.java` e `service/auth/AuthServiceTest.java`
+- **JWT:** `com/ufu/finance/service/auth/JwtServiceTest.java`
+- **Validação dos DTOs:** `com/ufu/finance/dto/ValidacaoDtoTest.java`
+
+Detalhes no [README](./README.md#-testes-automatizados).
 
 ---
 

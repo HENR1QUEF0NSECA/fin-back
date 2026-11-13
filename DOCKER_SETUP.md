@@ -14,23 +14,37 @@ Backend do Finance App desenvolvido em **Spring Boot 4.0.2** com **PostgreSQL**.
 cd C:finance-app-back
 ```
 
-### 2️⃣ Inicie os containers (API + PostgreSQL)
+### 2️⃣ Crie o arquivo `.env`
+O `docker-compose.yml` lê a senha do banco e o segredo do JWT do arquivo `.env` na raiz do projeto. Ele fica fora do Git (`.gitignore`) e fora da imagem (`.dockerignore`). Crie a partir do modelo versionado:
+```powershell
+Copy-Item .env.example .env
+```
+```bash
+# Git Bash / Linux / macOS
+cp .env.example .env
+```
+
+Depois edite o `.env` e preencha pelo menos `DB_PASSWORD` e `JWT_SECRET` (veja a seção **Variáveis de Ambiente** mais abaixo). Sem eles o compose para com a mensagem `defina DB_PASSWORD no arquivo .env` (ou `JWT_SECRET`).
+
+> O `.\docker-start.ps1 up` cria o `.env` a partir do `.env.example` se ele não existir e pede para você revisar os valores antes de subir.
+
+### 3️⃣ Inicie os containers (API + PostgreSQL)
 ```powershell
 docker-compose up --build
 ```
 
 **Esperado:**
-- PostgreSQL rodando em `localhost:5432`
+- PostgreSQL rodando em `localhost:5432` (ou na porta de `POSTGRES_PORT`)
 - API rodando em `http://localhost:8080`
 - Banco `finance` criado automaticamente
-- Segmentação de dados com 7 categorias iniciais (transport, salary, etc)
+- Segmentação de dados com 7 categorias iniciais (Transporte, Salário etc.)
 
 **Para rodar em background:**
 ```powershell
 docker-compose up -d --build
 ```
 
-### 3️⃣ Parar os containers
+### 4️⃣ Parar os containers
 ```powershell
 docker-compose down
 ```
@@ -39,6 +53,8 @@ docker-compose down
 ```powershell
 docker-compose down -v
 ```
+
+> ⚠️ **Já tinha o volume do Postgres de antes?** O Postgres só define a senha na **primeira** criação do volume. Se o volume foi criado com outra senha, use essa mesma senha no `DB_PASSWORD` do `.env`, ou recrie o volume com `docker-compose down -v` (**apaga os dados do banco**). Senão a API falha com `password authentication failed for user "postgres"`.
 
 ---
 
@@ -93,7 +109,7 @@ export default api;
 
 ### 1️⃣ Registrar Usuário
 ```http
-POST /api/users/register
+POST /api/auth/registro
 Content-Type: application/json
 
 {
@@ -129,7 +145,7 @@ Content-Type: application/json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "tipo": "Bearer",
-  "userId": 1,
+  "usuarioId": 1,
   "nome": "João Silva"
 }
 ```
@@ -146,9 +162,21 @@ localStorage.setItem('token', response.data.token);
 
 ### 3️⃣ Usar Token em Requisições
 ```http
-GET /api/users/me
+GET /api/usuarios/me
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
+
+**Response (200 OK):**
+```json
+{
+  "id": 1,
+  "nome": "João Silva",
+  "email": "joao@example.com",
+  "dataInclusao": "2025-02-21T10:30:00"
+}
+```
+
+Só login e registro dispensam o token. Não há rota para listar usuários: cada um só vê os próprios dados.
 
 ---
 
@@ -158,60 +186,78 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 #### Criar Transação
 ```http
-POST /api/transaction
+POST /api/transacoes
 Authorization: Bearer {JWT_TOKEN}
 Content-Type: application/json
 
 {
   "tipo": "D",
   "valor": 150.50,
-  "idCategoria": 1,
-  "descricao": "Uber para o trabalho",
-  "dataTransacao": "2025-02-21"
+  "categoriaId": 1,
+  "descricao": "Uber para o trabalho"
 }
 ```
 
+A data/hora é a do momento da criação. A resposta traz `id`, `usuarioId`, `categoriaId`, `nomeCategoria`, `valor`, `dataHoraTransacao`, `descricao`, `tipo`, `tipoDescricao` e, só no POST, `alertaOrcamento` (`true` quando a despesa leva o gasto da categoria no mês a 80% ou mais do orçamento).
+
 #### Listar todas as transações
 ```http
-GET /api/transaction
+GET /api/transacoes
 Authorization: Bearer {JWT_TOKEN}
 ```
 
 #### Filtrar por tipo (Receita ou Despesa)
 ```http
-GET /api/transaction/tipo/D
+GET /api/transacoes/tipo/D
 Authorization: Bearer {JWT_TOKEN}
 ```
 
 #### Filtrar por mês/ano
 ```http
-GET /api/transaction/mes?mes=2&ano=2025
+GET /api/transacoes/mes?mes=2&ano=2025
 Authorization: Bearer {JWT_TOKEN}
 ```
 
 #### Filtrar por período
 ```http
-GET /api/transaction/periodo?inicio=2025-01-01&fim=2025-02-28
+GET /api/transacoes/periodo?inicio=2025-01-01&fim=2025-02-28
 Authorization: Bearer {JWT_TOKEN}
 ```
 
 #### Filtrar por categoria
 ```http
-GET /api/transaction/categoria/1
+GET /api/transacoes/categoria/1
 Authorization: Bearer {JWT_TOKEN}
 ```
 
 #### Deletar transação
 ```http
-DELETE /api/transaction/5
+DELETE /api/transacoes/5
 Authorization: Bearer {JWT_TOKEN}
 ```
+
+### 🧾 Orçamentos
+
+```http
+POST /api/orcamentos
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
+
+{
+  "categoriaId": 1,
+  "mes": 2,
+  "ano": 2025,
+  "limite": 500.00
+}
+```
+
+Também: `GET /api/orcamentos`, `GET|PUT|DELETE /api/orcamentos/{id}`, `GET /api/orcamentos/mes?mes=2&ano=2025` e `GET /api/orcamentos/categoria/{categoriaId}/mes?mes=2&ano=2025`. Detalhes no [README](./README.md#-orçamentos-orcamentocontroller).
 
 ### 📈 Dashboard
 
 #### Resumo do mês
 ```http
-GET /api/transaction/dashboard/resumo?mes=2&ano=2025
+GET /api/transacoes/dashboard/resumo?mes=2&ano=2025
 Authorization: Bearer {JWT_TOKEN}
 
 Response:
@@ -222,18 +268,18 @@ Response:
   "totalDespesas": 1850.50,
   "saldo": 3149.50,
   "despesasPorCategoria": [
-    { "categoria": "transport", "total": 450.00 },
-    { "categoria": "entertainment", "total": 230.50 }
+    { "categoria": "Transporte", "total": 450.00 },
+    { "categoria": "Lazer", "total": 230.50 }
   ],
   "receitasPorCategoria": [
-    { "categoria": "salary", "total": 5000.00 }
+    { "categoria": "Salário", "total": 5000.00 }
   ]
 }
 ```
 
 #### Evolução anual (mês a mês)
 ```http
-GET /api/transaction/dashboard/evolucao?ano=2025
+GET /api/transacoes/dashboard/evolucao?ano=2025
 Authorization: Bearer {JWT_TOKEN}
 
 Response:
@@ -254,25 +300,25 @@ Response:
 
 ## 🗂️ Categorias Disponíveis
 
-As categorias são pré-carregadas via `data.sql`:
+As categorias são pré-carregadas via `data.sql` e listadas em `GET /api/categorias` (com token), que devolve `[{ "id": 1, "nome": "Transporte" }, ...]` em ordem alfabética:
 
-1. **transport** - Transportes (Uber, ônibus, gasolina)
-2. **entertainment** - Lazer (cinema, streaming)
-3. **utilities** - Contas (luz, água, internet)
-4. **healthcare** - Saúde (farmácia, médico)
-5. **shopping** - Compras em geral
-6. **salary** - Salário (receita)
-7. **freelance** - Trabalho freelancer (receita)
+1. **Transporte** - Uber, ônibus, gasolina
+2. **Lazer** - cinema, streaming
+3. **Contas da casa** - luz, água, internet
+4. **Saúde** - farmácia, médico
+5. **Compras** - compras em geral
+6. **Salário** - receita
+7. **Freelance** - trabalho freelancer (receita)
 
 **Para adicionar nova categoria (via SQL direto):**
 ```sql
-INSERT INTO categorias (id, nome) VALUES (8, 'investment') ON CONFLICT (id) DO NOTHING;
+INSERT INTO categorias (id, nome) VALUES (8, 'Investimentos') ON CONFLICT (id) DO NOTHING;
 ```
 
-Ou via interface SQL (DBeaver, pgAdmin) conectando em `localhost:5432`:
+Ou via interface SQL (DBeaver, pgAdmin) conectando em `localhost:5432` (ou na porta de `POSTGRES_PORT`):
 - **Database:** finance
-- **User:** postgres
-- **Password:** postgres123
+- **User:** o valor de `DB_USERNAME` no `.env` (padrão `postgres`)
+- **Password:** o valor de `DB_PASSWORD` no seu `.env`
 
 ---
 
@@ -286,7 +332,7 @@ $body = @{
     senha = "senha123"
 } | ConvertTo-Json
 
-curl -X POST http://localhost:8080/api/users/register `
+curl -X POST http://localhost:8080/api/auth/registro `
   -H "Content-Type: application/json" `
   -d $body
 ```
@@ -308,7 +354,7 @@ Write-Host "Token: $token"
 
 ### Listar transações (com token)
 ```powershell
-curl -X GET http://localhost:8080/api/transaction `
+curl -X GET http://localhost:8080/api/transacoes `
   -H "Authorization: Bearer $token"
 ```
 
@@ -332,16 +378,28 @@ categorias (id, nome)
 
 ## ⚙️ Variáveis de Ambiente (Configuração)
 
-Se precisar customizar, edite o `docker-compose.yml`:
+Toda a configuração fica no `.env` (copiado do `.env.example`). **Não coloque senhas no `docker-compose.yml` nem no `application.yaml`**: os dois só leem as variáveis.
 
-```yaml
-environment:
-  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/finance
-  SPRING_DATASOURCE_USERNAME: postgres
-  SPRING_DATASOURCE_PASSWORD: postgres123
-  JWT_SECRET: fHkl980UGl8cOfVCyfu518RnI37PtZt4C0xbJj1vw4IqdCMWlaXwgv8zGsIY8zxE
-  JWT_EXPIRATION: 86400000  # 24 horas em ms
+```env
+DB_USERNAME=postgres
+DB_PASSWORD=<sua-senha-do-postgres>
+# Usado só ao rodar a API fora do Docker (./gradlew bootRun)
+DB_URL=jdbc:postgresql://localhost:5432/finance
+POSTGRES_PORT=5432
+JWT_SECRET=<segredo-com-pelo-menos-32-caracteres>
+JWT_EXPIRATION=86400000
 ```
+
+| Variável | Obrigatória | Para que serve |
+|----------|:-----------:|----------------|
+| `DB_PASSWORD` | **Sim** | Senha do Postgres (usada pelo container do banco e pela API) |
+| `JWT_SECRET` | **Sim** | Segredo dos tokens, com **no mínimo 32 caracteres**; gere com `openssl rand -base64 48`. Mais curto, a API não sobe |
+| `DB_USERNAME` | Não (padrão `postgres`) | Usuário do Postgres |
+| `POSTGRES_PORT` | Não (padrão `5432`) | Porta do Postgres no seu computador |
+| `JWT_EXPIRATION` | Não (padrão `86400000`) | Validade do token em ms (24 horas) |
+| `DB_URL` | Não | Só para rodar a API fora do Docker. Dentro do Docker o compose já usa `jdbc:postgresql://postgres:5432/finance` |
+
+Depois de mudar o `.env`, recrie os containers com `docker-compose up -d --build`. (Mudar o `DB_PASSWORD` não altera a senha de um volume que já existe; veja o aviso no passo 4️⃣.)
 
 ---
 
@@ -357,11 +415,17 @@ docker-compose logs postgres
 ```
 
 ### "Port 5432 already in use"
-```powershell
-# Mudar porta no docker-compose.yml
-ports:
-  - "5433:5432"  # Usa 5433 localmente
+Defina outra porta no `.env` (a API dentro do Docker não é afetada):
+```env
+POSTGRES_PORT=5433
 ```
+Se também roda a API fora do Docker, ajuste a porta no `DB_URL` (`jdbc:postgresql://localhost:5433/finance`).
+
+### "required variable DB_PASSWORD is missing a value"
+O `.env` não existe ou está sem `DB_PASSWORD`/`JWT_SECRET`. Veja o passo 2️⃣.
+
+### "password authentication failed for user"
+O volume do Postgres foi criado com outra senha. Use essa senha no `DB_PASSWORD` ou recrie o volume com `docker-compose down -v` (apaga os dados).
 
 ### "API não responde"
 ```powershell
@@ -381,8 +445,9 @@ Tokens expiram em 24 horas. Faça login novamente para obter novo token.
 
 - Banco de dados **persiste** em volumes Docker (dados não são perdidos ao reiniciar)
 - Para **limpar tudo**, use: `docker-compose down -v`
-- JWT expire em **24h** (86400000 ms) — ajuste em `JWT_EXPIRATION` se necessário
-- CORS está configurado apenas para `localhost:4200` (Angular) — adicione outras origens conforme necessário em `CorsConfig.java`
+- JWT expira em **24h** (86400000 ms) — ajuste em `JWT_EXPIRATION` no `.env` se necessário
+- CORS está configurado para `localhost:4200` (Angular) e `localhost:3000` — adicione outras origens conforme necessário em `CorsConfig.java`
+- O `Dockerfile` gera a imagem com `-x test`; os testes automatizados rodam separados, com `.\gradlew.bat test` (veja o [README](./README.md#-testes-automatizados))
 
 ---
 

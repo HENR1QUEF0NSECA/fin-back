@@ -30,17 +30,22 @@ Se você quiser um link online para compartilhar com o professor, use **Railway*
 
 ### 4. Configurar Variáveis de Ambiente
 
-1. Vá em **Variables** (no painel)
+A API lê a configuração de variáveis de ambiente (as mesmas do `.env.example`). O `.env` local **não vai para o GitHub** nem para a imagem, então elas precisam ser cadastradas no Railway.
+
+1. Vá em **Variables** (no painel do serviço da API)
 2. Adicione:
 ```
-SPRING_DATASOURCE_URL=postgresql://<host>:<port>/<database>
-SPRING_DATASOURCE_USERNAME=<username>
-SPRING_DATASOURCE_PASSWORD=<password>
-JWT_SECRET=seu_secret_aqui
+DB_URL=jdbc:postgresql://<host>:<port>/<database>
+DB_USERNAME=<username>
+DB_PASSWORD=<password>
+JWT_SECRET=<segredo-com-pelo-menos-32-caracteres>
 JWT_EXPIRATION=86400000
 ```
 
-**Railway injeta automaticamente** as credenciais do PostgreSQL. Basta confirmar.
+**Atenção:**
+- O `DB_URL` precisa começar com **`jdbc:postgresql://`**. A URL de conexão que o Railway mostra para o Postgres (`postgresql://usuario:senha@host:porta/banco`) não serve direto: monte o `DB_URL` só com host, porta e banco, e passe usuário e senha em `DB_USERNAME` e `DB_PASSWORD`. Esses dados aparecem nas variáveis do serviço PostgreSQL no painel.
+- Gere um `JWT_SECRET` novo para produção (`openssl rand -base64 48`), diferente do que você usa localmente. Com menos de 32 caracteres a API não sobe.
+- `DB_PASSWORD` e `JWT_SECRET` são obrigatórios; sem eles a API não sobe.
 
 ### 5. Pronto! 🎉
 
@@ -54,13 +59,18 @@ https://seu-projeto-XXXXX.railway.app/api
 ## 🔗 Testar URL Online
 
 ```powershell
-# Teste se está respondendo
-curl https://seu-projeto-XXXXX.railway.app/api/users/register
+# Teste se está respondendo (sem token deve voltar 401 em JSON: a API está no ar)
+curl https://seu-projeto-XXXXX.railway.app/api/categorias
 
-# Exemplo com jq (pretty print):
-curl https://seu-projeto-XXXXX.railway.app/api/auth/login `
+# Cadastrar um usuário
+curl -X POST https://seu-projeto-XXXXX.railway.app/api/auth/registro `
   -H "Content-Type: application/json" `
-  -d '{"email":"teste@test.com","senha":"123"}'
+  -d '{"nome":"Teste","email":"teste@test.com","senha":"senha123"}'
+
+# Login (devolve token, tipo, usuarioId e nome)
+curl -X POST https://seu-projeto-XXXXX.railway.app/api/auth/login `
+  -H "Content-Type: application/json" `
+  -d '{"email":"teste@test.com","senha":"senha123"}'
 ```
 
 ---
@@ -103,8 +113,9 @@ Seu Angular pode chamar de qualquer lugar agora! 🌍
 Verifique:
 1. GitHub está conectado à Railway
 2. PostgreSQL foi adicionado como plugin
-3. Variáveis de ambiente estão configuradas
+3. Variáveis de ambiente estão configuradas (`DB_URL` com prefixo `jdbc:postgresql://`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` com 32+ caracteres, `JWT_EXPIRATION`)
 4. Build logs: clique em **View Build Logs**
+5. Deploy logs: `Could not resolve placeholder` indica variável faltando; `WeakKeyException` indica `JWT_SECRET` curto demais
 
 Se tiver erro, consulte [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 

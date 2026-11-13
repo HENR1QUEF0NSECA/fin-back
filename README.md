@@ -11,17 +11,20 @@
 - [Início Rápido](#-início-rápido)
 - [Docker Setup](#-docker-setup)
 - [Integração Angular](#-integração-angular)
-- [Visão Geral](#visão-geral)
-- [Setup e Instalação](#setup-e-instalação)
-- [Autenticação JWT](#autenticação-jwt)
-- [Endpoints da API](#endpoints-da-api)
-  - [Autenticação](#autenticação-authcontroller)
-  - [Usuários](#usuários-usercontroller)
-  - [Transações](#transações-transacaocontroller)
-- [Data Transfer Objects (DTOs)](#data-transfer-objects-dtos)
-- [Estrutura de Dados](#estrutura-de-dados)
-- [Códigos de Status HTTP](#códigos-de-status-http)
-- [Exemplos de Integração Frontend](#exemplos-de-integração-frontend)
+- [Visão Geral](#-visão-geral)
+- [Setup e Instalação](#-setup-e-instalação) (configuração pelo `.env`)
+- [Testes Automatizados](#-testes-automatizados)
+- [Autenticação JWT](#-autenticação-jwt)
+- [Endpoints da API](#-endpoints-da-api)
+  - [Autenticação](#-autenticação-authcontroller)
+  - [Usuários](#-usuários-usuariocontroller)
+  - [Categorias](#-categorias-categoriacontroller)
+  - [Transações](#-transações-transacaocontroller)
+  - [Orçamentos](#-orçamentos-orcamentocontroller)
+- [Data Transfer Objects (DTOs)](#-data-transfer-objects-dtos)
+- [Estrutura de Dados](#-estrutura-de-dados)
+- [Códigos de Status HTTP](#-códigos-de-status-http)
+- [Exemplos de Integração Frontend](#-exemplos-de-integração-frontend)
 
 ---
 
@@ -32,6 +35,9 @@
 Veja a documentação completa em [DOCKER_SETUP.md](./DOCKER_SETUP.md)
 
 ```powershell
+# Antes da primeira vez: criar o .env e preencher DB_PASSWORD e JWT_SECRET
+Copy-Item .env.example .env
+
 # Iniciar tudo com Docker Compose
 docker-compose up --build
 
@@ -44,13 +50,13 @@ docker-compose down
 
 **Ou use o script PowerShell:**
 ```powershell
-.\docker-start.ps1 up          # Inicia
+.\docker-start.ps1 up          # Inicia (cria o .env a partir do .env.example se ele não existir)
 .\docker-start.ps1 down        # Para
 .\docker-start.ps1 logs        # Mostra logs
 ```
 
 **Esperado:**
-- PostgreSQL: `localhost:5432`
+- PostgreSQL: `localhost:5432` (ou a porta definida em `POSTGRES_PORT` no `.env`)
 - API: `http://localhost:8080`
 
 ### Deploy Online (Opcional)
@@ -83,6 +89,7 @@ O backend fornece uma API RESTful para gerenciar:
 - **Cadastro e perfil de usuários**
 - **Transações financeiras** (receitas e despesas)
 - **Categorias de transações** (pré-configuradas)
+- **Orçamentos mensais por categoria**, com alerta ao atingir 80% do limite
 - **Dashboard com resumos e gráficos**
 
 ### Tecnologias Utilizadas
@@ -93,6 +100,7 @@ O backend fornece uma API RESTful para gerenciar:
 - **JPA/Hibernate** para ORM
 - **Validation (Jakarta)** para validação de dados
 - **Gradle** para build
+- **JUnit 5 + Mockito + H2** para os testes automatizados
 
 ### Requisitos
 
@@ -114,53 +122,108 @@ CREATE DATABASE finance;
 \c finance
 ```
 
-### 2. Configurar application.yaml
+### 2. Configurar as variáveis de ambiente (`.env`)
 
-Edite o arquivo `src/main/resources/application.yaml`:
+O `src/main/resources/application.yaml` **não guarda nenhum segredo** e não precisa ser editado. Senha do banco e segredo do JWT vêm de variáveis de ambiente, que a API lê do arquivo `.env` na raiz do projeto (`spring.config.import: optional:file:.env[.properties]`). O mesmo `.env` é usado pelo `docker-compose.yml`.
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/finance
-    username: postgres
-    password: sua_senha_postgres
-    driver-class-name: org.postgresql.Driver
+Crie o seu `.env` a partir do modelo versionado:
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    defer-datasource-initialization: true
-  sql:
-    init:
-      mode: always
-
-server:
-  port: 8080
-
-jwt:
-  secret: fHkl980UGl8cOfVCyfu518RnI37PtZt4C0xbJj1vw4IqdCMWlaXwgv8zGsIY8zxE
-  expiration: 86400000  # 24 horas em ms
+```bash
+cp .env.example .env
 ```
+
+```powershell
+# PowerShell
+Copy-Item .env.example .env
+```
+
+Depois preencha os valores:
+
+| Variável | Obrigatória | Padrão | Descrição |
+|----------|:-----------:|--------|-----------|
+| `DB_URL` | Não | `jdbc:postgresql://localhost:5432/finance` | URL JDBC do banco (usada ao rodar a API fora do Docker) |
+| `DB_USERNAME` | Não | `postgres` | Usuário do PostgreSQL |
+| `DB_PASSWORD` | **Sim** | - | Senha do PostgreSQL |
+| `POSTGRES_PORT` | Não | `5432` | Porta do Postgres do Docker no seu computador |
+| `JWT_SECRET` | **Sim** | - | Segredo para assinar os tokens, com **no mínimo 32 caracteres** |
+| `JWT_EXPIRATION` | Não | `86400000` | Validade do token em ms (24 horas) |
+
+Para gerar um `JWT_SECRET`:
+
+```bash
+openssl rand -base64 48
+```
+
+```powershell
+# PowerShell, sem openssl
+$b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)
+```
+
+> ⚠️ O `.env` está no `.gitignore` e no `.dockerignore`: **nunca faça commit dele**. Só o `.env.example`, com valores de exemplo, vai para o Git.
+>
+> Se o `JWT_SECRET` tiver menos de 32 caracteres, a API **não sobe** (o jjwt recusa a chave como fraca). Se `DB_PASSWORD` ou `JWT_SECRET` estiverem faltando, ela também não sobe.
+>
+> Escreva os valores sem aspas: ao rodar com `./gradlew bootRun`, o `.env` é lido como arquivo `.properties`, e aspas passariam a fazer parte do valor.
 
 ### 3. Build e Execução
 
+Rode os comandos a partir da raiz do projeto (é lá que a API procura o `.env`):
+
 ```bash
-# Build do projeto
+# Build do projeto (também roda os testes automatizados)
 ./gradlew build
 
 # Executar
 ./gradlew bootRun
 
 # Ou executar o JAR gerado
-java -jar build/libs/finance-app-back-0.0.1-SNAPSHOT.jar
+java -jar build/libs/finance-app-0.0.1-SNAPSHOT.jar
 ```
 
+No Windows, use `.\gradlew.bat` no lugar de `./gradlew`.
+
 A API estará disponível em `http://localhost:8080`
+
+### 4. Perfil `dev` (log de SQL)
+
+Por padrão o SQL gerado pelo Hibernate não aparece no log (`show-sql: false`). Para vê-lo durante o desenvolvimento, ative o perfil `dev` (`src/main/resources/application-dev.yaml`):
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=dev'
+```
+
+---
+
+## 🧪 Testes Automatizados
+
+```bash
+./gradlew test
+```
+
+```powershell
+# Windows
+.\gradlew.bat test
+```
+
+São **37 testes**, e eles **não precisam de PostgreSQL nem de Docker**: rodam com o perfil `test`, que usa um banco H2 em memória (`src/test/resources/application-test.yaml`). O `.env` também não é necessário para os testes.
+
+| Classe (`src/test/java`) | O que cobre |
+|--------------------------|-------------|
+| `ApiIntegracaoTest` | Ponta a ponta com MockMvc: cadastro, login e `/api/usuarios/me`; respostas 401, 403, 404 e 409; validação do body e dos parâmetros; alerta de orçamento em 80% |
+| `UsuarioServiceTest` | Unitário (Mockito): e-mail normalizado e duplicado, senha com hash, usuário do token que não existe mais (401) |
+| `AuthServiceTest` | Unitário (Mockito): login correto, senha errada e e-mail inexistente com a mesma mensagem |
+| `JwtServiceTest` | Token válido, assinado com outro segredo, expirado, e segredo curto que impede a API de subir |
+| `OrcamentoServiceTest` | Unitário (Mockito): orçamento repetido (409), de outro usuário (403), inexistente (404) e alerta a partir de 80% |
+| `TransacaoServiceTest` | Unitário (Mockito): alerta só em despesa, categoria inexistente (400), período invertido (400), exclusão por outro usuário (403) |
+| `ValidacaoDtoTest` | Anotações `@Mes`/`@Ano`, limite do orçamento, senha curta e valor com 3 casas decimais |
+
+**Sem JDK instalado?** Dá para rodar os testes com Docker:
+
+```powershell
+docker run --rm -v "${PWD}:/app" -w /app gradle:8-jdk21-alpine gradle test --no-daemon
+```
+
+O `Dockerfile` continua gerando a imagem com `-x test` (os testes rodam separados, com o comando acima).
 
 ---
 
@@ -168,17 +231,17 @@ A API estará disponível em `http://localhost:8080`
 
 ### Fluxo de Autenticação
 
-1. **Registro**: Novo usuário cria conta via `/api/users/register`
-2. **Login**: Usuário faz login via `/api/auth/login`
+1. **Registro**: Novo usuário cria conta via `POST /api/auth/registro`
+2. **Login**: Usuário faz login via `POST /api/auth/login`
 3. **Token**: Backend retorna token JWT
 4. **Requisições Autenticadas**: Cliente inclui token no header `Authorization: Bearer <token>`
 
 ### Estrutura do Token JWT
 
 O token contém:
-- `userId`: ID do usuário
+- `userId`: ID do usuário (nome interno da claim; na resposta do login o campo se chama `usuarioId`)
 - `nome`: Nome do usuário
-- `exp`: Data de expiração (24 horas por padrão)
+- `exp`: Data de expiração (24 horas por padrão, configurável em `JWT_EXPIRATION`)
 
 ### Exemplo de Token
 
@@ -189,7 +252,7 @@ Header: Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIiwiaWF0IjoxN
 ### Rotas Públicas (sem autenticação)
 
 - `POST /api/auth/login`
-- `POST /api/users/register`
+- `POST /api/auth/registro`
 
 ### Rotas Protegidas (requerem token)
 
@@ -207,6 +270,33 @@ Authorization: Bearer seu_token_jwt
 ```
 http://localhost:8080
 ```
+
+### Resumo das rotas
+
+Todas recebem e devolvem JSON. Só login e registro dispensam o token.
+
+| Método | Rota | Token | Descrição |
+|--------|------|:-----:|-----------|
+| POST | `/api/auth/login` | Não | Login, devolve o token JWT |
+| POST | `/api/auth/registro` | Não | Cadastro de usuário |
+| GET | `/api/usuarios/me` | Sim | Dados do usuário logado |
+| GET | `/api/categorias` | Sim | Lista as categorias |
+| POST | `/api/transacoes` | Sim | Cria transação |
+| GET | `/api/transacoes` | Sim | Lista as transações do usuário |
+| DELETE | `/api/transacoes/{id}` | Sim | Remove transação |
+| GET | `/api/transacoes/tipo/{tipo}` | Sim | Filtra por tipo (`R` ou `D`) |
+| GET | `/api/transacoes/mes?mes=&ano=` | Sim | Filtra por mês/ano |
+| GET | `/api/transacoes/periodo?inicio=&fim=` | Sim | Filtra por intervalo de datas |
+| GET | `/api/transacoes/categoria/{categoriaId}` | Sim | Filtra por categoria |
+| GET | `/api/transacoes/dashboard/resumo?mes=&ano=` | Sim | Resumo do mês |
+| GET | `/api/transacoes/dashboard/evolucao?ano=` | Sim | Evolução mês a mês no ano |
+| POST | `/api/orcamentos` | Sim | Cria orçamento |
+| GET | `/api/orcamentos` | Sim | Lista os orçamentos do usuário |
+| GET | `/api/orcamentos/{id}` | Sim | Busca orçamento |
+| PUT | `/api/orcamentos/{id}` | Sim | Atualiza orçamento |
+| DELETE | `/api/orcamentos/{id}` | Sim | Remove orçamento |
+| GET | `/api/orcamentos/mes?mes=&ano=` | Sim | Orçamentos de um mês |
+| GET | `/api/orcamentos/categoria/{categoriaId}/mes?mes=&ano=` | Sim | Orçamento de uma categoria em um mês |
 
 ---
 
@@ -233,7 +323,7 @@ Realiza autenticação e retorna token JWT.
 {
   "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIiwiaWF0IjoxNjgyNjAyMDAwfQ...",
   "tipo": "Bearer",
-  "userId": 1,
+  "usuarioId": 1,
   "nome": "João Silva"
 }
 ```
@@ -257,11 +347,9 @@ Realiza autenticação e retorna token JWT.
 
 ---
 
-## 👤 Usuários (UserController)
-
 ### Registrar Novo Usuário
 
-**POST** `/api/users/register`
+**POST** `/api/auth/registro`
 
 Cadastra um novo usuário (rota pública).
 
@@ -319,17 +407,15 @@ Cadastra um novo usuário (rota pública).
 
 ---
 
-### Buscar Usuário por ID
+## 👤 Usuários (UsuarioController)
 
-**GET** `/api/users/{id}`
+Não existe rota para listar usuários nem para consultar outro usuário por ID: cada usuário só enxerga os próprios dados, pelo `/me`.
 
-Retorna informações de um usuário específico (requer autenticação).
+### Obter Dados do Usuário Autenticado
 
-#### Parâmetros
+**GET** `/api/usuarios/me`
 
-| Parâmetro | Tipo | Descrição |
-|-----------|------|-----------|
-| id | Long (path) | ID do usuário |
+Retorna os dados do dono do token. O `id` vem do token, mas os dados são lidos do banco.
 
 #### Response (200 OK)
 
@@ -342,49 +428,37 @@ Retorna informações de um usuário específico (requer autenticação).
 }
 ```
 
+#### Exemplos de Erro
+
+**401 Unauthorized** - Token ausente/inválido, ou o usuário do token não existe mais
+
+```json
+{
+  "status": 401,
+  "erro": "Usuário não encontrado",
+  "timestamp": "2025-02-15T10:30:00"
+}
+```
+
 ---
 
-### Listar Todos os Usuários
+## 🏷️ Categorias (CategoriaController)
 
-**GET** `/api/users`
+### Listar Categorias
 
-Lista todos os usuários cadastrados (requer autenticação).
+**GET** `/api/categorias`
+
+Lista as categorias disponíveis, em ordem alfabética. Elas são compartilhadas entre todos os usuários (veja [Categorias Pré-carregadas](#-categorias-pré-carregadas)).
 
 #### Response (200 OK)
 
 ```json
 [
-  {
-    "id": 1,
-    "nome": "João Silva",
-    "email": "joao@example.com",
-    "dataInclusao": "2025-02-15T10:30:00"
-  },
-  {
-    "id": 2,
-    "nome": "Maria Santos",
-    "email": "maria@example.com",
-    "dataInclusao": "2025-02-14T09:15:00"
-  }
+  { "id": 5, "nome": "Compras" },
+  { "id": 3, "nome": "Contas da casa" },
+  { "id": 7, "nome": "Freelance" },
+  ...
 ]
-```
-
----
-
-### Obter Dados do Usuário Autenticado
-
-**GET** `/api/users/me`
-
-Retorna ID e nome do usuário autenticado (extraídos do token).
-
-#### Response (200 OK)
-
-```json
-{
-  "userId": 1,
-  "nome": "João Silva",
-  "mensagem": "Você está autenticado!"
-}
 ```
 
 ---
@@ -393,7 +467,7 @@ Retorna ID e nome do usuário autenticado (extraídos do token).
 
 ### Criar Transação
 
-**POST** `/api/transaction`
+**POST** `/api/transacoes`
 
 Cria uma nova transação para o usuário autenticado.
 
@@ -403,9 +477,8 @@ Cria uma nova transação para o usuário autenticado.
 {
   "tipo": "D",
   "valor": 150.00,
-  "idCategoria": 1,
-  "descricao": "Uber para o trabalho",
-  "dataTransacao": "2025-02-15"
+  "categoriaId": 1,
+  "descricao": "Uber para o trabalho"
 }
 ```
 
@@ -413,17 +486,22 @@ Cria uma nova transação para o usuário autenticado.
 
 ```json
 {
-  "idTransacao": 5,
-  "idUsuario": 1,
-  "idCategoria": 1,
-  "nomeCategoria": "transporte",
+  "id": 5,
+  "usuarioId": 1,
+  "categoriaId": 1,
+  "nomeCategoria": "Transporte",
   "valor": 150.00,
   "dataHoraTransacao": "2025-02-15T10:30:00",
   "descricao": "Uber para o trabalho",
   "tipo": "D",
-  "tipoDescricao": "Despesa"
+  "tipoDescricao": "Despesa",
+  "alertaOrcamento": false
 }
 ```
+
+`alertaOrcamento` só aparece na resposta do POST (nas listagens ele é omitido):
+- `true` quando a despesa fez o gasto da categoria no mês atingir **80% ou mais** do [orçamento](#-orçamentos-orcamentocontroller) daquele mês;
+- `false` se não há orçamento para a categoria/mês, se ainda não chegou a 80%, ou se a transação é uma receita.
 
 #### Validações
 
@@ -431,10 +509,10 @@ Cria uma nova transação para o usuário autenticado.
 |-------|-------|
 | `tipo` | obrigatório, "R" ou "D" |
 | `valor` | obrigatório, > 0, máx 10 dígitos inteiros + 2 decimais |
-| `idCategoria` | obrigatório, deve existir |
+| `categoriaId` | obrigatório, deve existir (senão 400 "Categoria não encontrada") |
 | `descricao` | opcional, máx 255 caracteres |
 
-A data/hora não é enviada: o back grava o momento da criação (`dataHoraTransacao`).
+A data/hora não é enviada: o back grava o momento da criação (`dataHoraTransacao`). Por isso o alerta de orçamento sempre se refere ao mês atual.
 
 Um valor com tipo errado (ex.: `"tipo": "X"` ou `"valor": "abc"`) também volta como erro de campo:
 
@@ -451,7 +529,7 @@ Um valor com tipo errado (ex.: `"tipo": "X"` ou `"valor": "abc"`) também volta 
 
 ### Deletar Transação
 
-**DELETE** `/api/transaction/{id}`
+**DELETE** `/api/transacoes/{id}`
 
 Remove uma transação (apenas o dono pode deletar).
 
@@ -471,30 +549,31 @@ Sem body - apenas indica sucesso.
 
 ```json
 {
-  "timestamp": "2025-02-15T10:30:00",
   "status": 403,
-  "error": "Forbidden",
-  "message": "Você não tem permissão para deletar esta transação"
+  "erro": "Acesso negado: você não pode deletar esta transação",
+  "timestamp": "2025-02-15T10:30:00"
 }
 ```
+
+**404 Not Found** - Transação não existe (`"erro": "Transação não encontrada"`)
 
 ---
 
 ### Listar Todas as Transações
 
-**GET** `/api/transaction`
+**GET** `/api/transacoes`
 
-Retorna todas as transações do usuário autenticado.
+Retorna todas as transações do usuário autenticado, da mais recente para a mais antiga.
 
 #### Response (200 OK)
 
 ```json
 [
   {
-    "idTransacao": 1,
-    "idUsuario": 1,
-    "idCategoria": 1,
-    "nomeCategoria": "transporte",
+    "id": 1,
+    "usuarioId": 1,
+    "categoriaId": 1,
+    "nomeCategoria": "Transporte",
     "valor": 50.00,
     "dataHoraTransacao": "2025-02-14T09:00:00",
     "descricao": "Passagem de ônibus",
@@ -502,10 +581,10 @@ Retorna todas as transações do usuário autenticado.
     "tipoDescricao": "Despesa"
   },
   {
-    "idTransacao": 2,
-    "idUsuario": 1,
-    "idCategoria": 5,
-    "nomeCategoria": "salário",
+    "id": 2,
+    "usuarioId": 1,
+    "categoriaId": 6,
+    "nomeCategoria": "Salário",
     "valor": 5000.00,
     "dataHoraTransacao": "2025-02-01T08:00:00",
     "descricao": "Salário fevereiro",
@@ -519,7 +598,7 @@ Retorna todas as transações do usuário autenticado.
 
 ### Filtrar por Tipo
 
-**GET** `/api/transaction/tipo/{tipo}`
+**GET** `/api/transacoes/tipo/{tipo}`
 
 Filtra transações por tipo (receita ou despesa).
 
@@ -532,8 +611,8 @@ Filtra transações por tipo (receita ou despesa).
 #### Exemplos
 
 ```
-GET /api/transaction/tipo/D
-GET /api/transaction/tipo/R
+GET /api/transacoes/tipo/D
+GET /api/transacoes/tipo/R
 ```
 
 #### Response (200 OK)
@@ -541,10 +620,10 @@ GET /api/transaction/tipo/R
 ```json
 [
   {
-    "idTransacao": 1,
-    "idUsuario": 1,
-    "idCategoria": 1,
-    "nomeCategoria": "transporte",
+    "id": 1,
+    "usuarioId": 1,
+    "categoriaId": 1,
+    "nomeCategoria": "Transporte",
     "valor": 50.00,
     "dataHoraTransacao": "2025-02-14T09:00:00",
     "descricao": "Passagem de ônibus",
@@ -558,7 +637,7 @@ GET /api/transaction/tipo/R
 
 ### Filtrar por Mês e Ano
 
-**GET** `/api/transaction/mes?mes=2&ano=2025`
+**GET** `/api/transacoes/mes?mes=2&ano=2025`
 
 Retorna transações de um mês específico.
 
@@ -572,8 +651,8 @@ Retorna transações de um mês específico.
 #### Exemplos
 
 ```
-GET /api/transaction/mes?mes=2&ano=2025
-GET /api/transaction/mes?mes=12&ano=2024
+GET /api/transacoes/mes?mes=2&ano=2025
+GET /api/transacoes/mes?mes=12&ano=2024
 ```
 
 #### Response (200 OK)
@@ -581,10 +660,10 @@ GET /api/transaction/mes?mes=12&ano=2024
 ```json
 [
   {
-    "idTransacao": 1,
-    "idUsuario": 1,
-    "idCategoria": 1,
-    "nomeCategoria": "transporte",
+    "id": 1,
+    "usuarioId": 1,
+    "categoriaId": 1,
+    "nomeCategoria": "Transporte",
     "valor": 150.00,
     "dataHoraTransacao": "2025-02-15T10:30:00",
     "descricao": "Uber para o trabalho",
@@ -598,7 +677,7 @@ GET /api/transaction/mes?mes=12&ano=2024
 
 ### Filtrar por Período
 
-**GET** `/api/transaction/periodo?inicio=2025-01-01&fim=2025-02-28`
+**GET** `/api/transacoes/periodo?inicio=2025-01-01&fim=2025-02-28`
 
 Retorna transações em um intervalo de datas.
 
@@ -612,8 +691,8 @@ Retorna transações em um intervalo de datas.
 #### Exemplos
 
 ```
-GET /api/transaction/periodo?inicio=2025-01-01&fim=2025-02-28
-GET /api/transaction/periodo?inicio=2025-02-01&fim=2025-02-15
+GET /api/transacoes/periodo?inicio=2025-01-01&fim=2025-02-28
+GET /api/transacoes/periodo?inicio=2025-02-01&fim=2025-02-15
 ```
 
 #### Response (200 OK)
@@ -621,10 +700,10 @@ GET /api/transaction/periodo?inicio=2025-02-01&fim=2025-02-15
 ```json
 [
   {
-    "idTransacao": 1,
-    "idUsuario": 1,
-    "idCategoria": 1,
-    "nomeCategoria": "transporte",
+    "id": 1,
+    "usuarioId": 1,
+    "categoriaId": 1,
+    "nomeCategoria": "Transporte",
     "valor": 150.00,
     "dataHoraTransacao": "2025-02-15T10:30:00",
     "descricao": "Uber para o trabalho",
@@ -638,21 +717,21 @@ GET /api/transaction/periodo?inicio=2025-02-01&fim=2025-02-15
 
 ### Filtrar por Categoria
 
-**GET** `/api/transaction/categoria/{idCategoria}`
+**GET** `/api/transacoes/categoria/{categoriaId}`
 
-Retorna transações filtradas por uma categoria específica.
+Retorna transações filtradas por uma categoria específica (404 se a categoria não existe).
 
 #### Parâmetros
 
 | Parâmetro | Tipo | Descrição |
 |-----------|------|-----------|
-| idCategoria | Integer (path) | ID da categoria |
+| categoriaId | Integer (path) | ID da categoria |
 
 #### Exemplos
 
 ```
-GET /api/transaction/categoria/1
-GET /api/transaction/categoria/5
+GET /api/transacoes/categoria/1
+GET /api/transacoes/categoria/6
 ```
 
 #### Response (200 OK)
@@ -660,10 +739,10 @@ GET /api/transaction/categoria/5
 ```json
 [
   {
-    "idTransacao": 1,
-    "idUsuario": 1,
-    "idCategoria": 1,
-    "nomeCategoria": "transporte",
+    "id": 1,
+    "usuarioId": 1,
+    "categoriaId": 1,
+    "nomeCategoria": "Transporte",
     "valor": 50.00,
     "dataHoraTransacao": "2025-02-14T09:00:00",
     "descricao": "Passagem de ônibus",
@@ -677,7 +756,7 @@ GET /api/transaction/categoria/5
 
 ### Resumo Mensal (Dashboard)
 
-**GET** `/api/transaction/dashboard/resumo?mes=2&ano=2025`
+**GET** `/api/transacoes/dashboard/resumo?mes=2&ano=2025`
 
 Retorna resumo financeiro do mês com totais e breakdown por categoria. Ideal para cards e gráfico de pizza.
 
@@ -699,21 +778,21 @@ Retorna resumo financeiro do mês com totais e breakdown por categoria. Ideal pa
   "saldo": 3799.50,
   "despesasPorCategoria": [
     {
-      "categoria": "transporte",
+      "categoria": "Transporte",
       "total": 150.00
     },
     {
-      "categoria": "alimentação",
+      "categoria": "Compras",
       "total": 450.50
     },
     {
-      "categoria": "lazer",
+      "categoria": "Lazer",
       "total": 600.00
     }
   ],
   "receitasPorCategoria": [
     {
-      "categoria": "salário",
+      "categoria": "Salário",
       "total": 5000.00
     }
   ]
@@ -724,7 +803,7 @@ Retorna resumo financeiro do mês com totais e breakdown por categoria. Ideal pa
 
 ### Evolução Anual (Dashboard)
 
-**GET** `/api/transaction/dashboard/evolucao?ano=2025`
+**GET** `/api/transacoes/dashboard/evolucao?ano=2025`
 
 Retorna totais mês a mês do ano. Ideal para gráfico de linha ou barras.
 
@@ -751,6 +830,71 @@ Retorna totais mês a mês do ano. Ideal para gráfico de linha ou barras.
   ]
 }
 ```
+
+---
+
+## 🧾 Orçamentos (OrcamentoController)
+
+Limite mensal de gasto por categoria. Cada usuário pode ter **um orçamento por categoria em cada mês/ano**. Todas as rotas exigem token, e só o dono acessa o próprio orçamento.
+
+| Método | Rota | Resposta |
+|--------|------|----------|
+| POST | `/api/orcamentos` | 201 com o orçamento criado |
+| GET | `/api/orcamentos` | 200 com a lista do usuário (mais recentes primeiro) |
+| GET | `/api/orcamentos/{id}` | 200 |
+| PUT | `/api/orcamentos/{id}` | 200 (atualiza categoria, mês, ano e limite) |
+| DELETE | `/api/orcamentos/{id}` | 204 (as transações continuam; só o limite some) |
+| GET | `/api/orcamentos/mes?mes=2&ano=2025` | 200 com os orçamentos do mês |
+| GET | `/api/orcamentos/categoria/{categoriaId}/mes?mes=2&ano=2025` | 200, ou 404 se não houver orçamento para a categoria no mês |
+
+### Criar Orçamento
+
+**POST** `/api/orcamentos` (o PUT usa o mesmo body)
+
+#### Request Body
+
+```json
+{
+  "categoriaId": 1,
+  "mes": 2,
+  "ano": 2025,
+  "limite": 300.00
+}
+```
+
+#### Response (201 Created)
+
+```json
+{
+  "id": 1,
+  "usuarioId": 1,
+  "categoriaId": 1,
+  "nomeCategoria": "Transporte",
+  "mes": 2,
+  "ano": 2025,
+  "limite": 300.00,
+  "consumido": 250.00,
+  "percentualUtilizado": 83.0,
+  "saldo": 50.00,
+  "alertaAtivo": true,
+  "dataCriacao": "2025-02-15T10:30:00",
+  "dataAtualizacao": "2025-02-15T10:30:00"
+}
+```
+
+- `consumido`: soma das **despesas** do usuário na categoria naquele mês/ano.
+- `percentualUtilizado`: `consumido / limite`, em porcentagem.
+- `saldo`: `limite - consumido` (nunca negativo).
+- `alertaAtivo`: `true` a partir de 80% do limite.
+
+#### Erros comuns
+
+| Status | Quando |
+|--------|--------|
+| 400 | Campo inválido (`mes` fora de 1-12, `ano` fora de 2000-2100, `limite` <= 0) ou categoria inexistente |
+| 403 | O orçamento pertence a outro usuário |
+| 404 | Orçamento não encontrado |
+| 409 | Já existe orçamento para a categoria no mês/ano informado |
 
 ---
 
@@ -782,7 +926,7 @@ Retornado após login bem-sucedido.
 {
   "token": "eyJhbGciOiJIUzI1NiJ9...",
   "tipo": "Bearer",
-  "userId": 1,
+  "usuarioId": 1,
   "nome": "João Silva"
 }
 ```
@@ -791,14 +935,14 @@ Retornado após login bem-sucedido.
 |-------|------|-----------|
 | token | String | Token JWT para autenticação |
 | tipo | String | Sempre "Bearer" |
-| userId | Long | ID do usuário |
+| usuarioId | Long | ID do usuário |
 | nome | String | Nome do usuário |
 
 ---
 
-### UserDTO
+### UsuarioRequestDTO
 
-Utilizado no registro de novos usuários.
+Utilizado no registro de novos usuários (`POST /api/auth/registro`).
 
 ```json
 {
@@ -816,9 +960,9 @@ Utilizado no registro de novos usuários.
 
 ---
 
-### UserResponseDTO
+### UsuarioResponseDTO
 
-Retornado nas requisições de usuário.
+Retornado no registro e em `GET /api/usuarios/me`. Nunca inclui a senha.
 
 ```json
 {
@@ -838,6 +982,21 @@ Retornado nas requisições de usuário.
 
 ---
 
+### CategoriaResponseDTO
+
+Retornado em `GET /api/categorias`.
+
+```json
+{ "id": 1, "nome": "Transporte" }
+```
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | Integer | ID da categoria |
+| nome | String | Nome da categoria |
+
+---
+
 ### TransacaoRequestDTO
 
 Utilizado na criação de transações.
@@ -846,21 +1005,19 @@ Utilizado na criação de transações.
 {
   "tipo": "D",
   "valor": 150.00,
-  "idCategoria": 1,
-  "descricao": "Uber para o trabalho",
-  "dataTransacao": "2025-02-15"
+  "categoriaId": 1,
+  "descricao": "Uber para o trabalho"
 }
 ```
 
 | Campo | Tipo | Validação | Descrição |
 |-------|------|-----------|-----------|
 | tipo | TipoTransacao | obrigatório | "R" (Receita) ou "D" (Despesa) |
-| valor | BigDecimal | obrigatório, > 0 | Valor da transação |
-| idCategoria | Integer | obrigatório | ID da categoria |
+| valor | BigDecimal | obrigatório, > 0, máx 10 dígitos inteiros + 2 decimais | Valor da transação |
+| categoriaId | Integer | obrigatório | ID da categoria |
 | descricao | String | opcional, até 255 caracteres | Descrição da transação |
-| dataTransacao | LocalDate | - | Data da transação (formato YYYY-MM-DD) |
 
-**Nota:** O campo `dataTransacao` pode não estar no DTO atual. Verifique se precisa ser adicionado.
+Não há campo de data: a transação é gravada com a data/hora do momento da criação.
 
 ---
 
@@ -870,29 +1027,75 @@ Retornado nas operações com transações.
 
 ```json
 {
-  "idTransacao": 5,
-  "idUsuario": 1,
-  "idCategoria": 1,
-  "nomeCategoria": "transporte",
+  "id": 5,
+  "usuarioId": 1,
+  "categoriaId": 1,
+  "nomeCategoria": "Transporte",
   "valor": 150.00,
   "dataHoraTransacao": "2025-02-15T10:30:00",
   "descricao": "Uber para o trabalho",
   "tipo": "D",
-  "tipoDescricao": "Despesa"
+  "tipoDescricao": "Despesa",
+  "alertaOrcamento": false
 }
 ```
 
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
-| idTransacao | Long | ID único da transação |
-| idUsuario | Long | ID do usuário proprietário |
-| idCategoria | Integer | ID da categoria |
+| id | Long | ID único da transação |
+| usuarioId | Long | ID do usuário proprietário |
+| categoriaId | Integer | ID da categoria |
 | nomeCategoria | String | Nome da categoria |
 | valor | BigDecimal | Valor da transação |
 | dataHoraTransacao | LocalDateTime | Data/hora da criação |
 | descricao | String | Descrição |
 | tipo | String | "R" ou "D" |
 | tipoDescricao | String | "Receita" ou "Despesa" |
+| alertaOrcamento | Boolean | Só no POST: `true` se a despesa levou o gasto da categoria no mês a 80% ou mais do orçamento |
+
+---
+
+### OrcamentoRequestDTO
+
+Utilizado na criação e na atualização de orçamentos.
+
+```json
+{
+  "categoriaId": 1,
+  "mes": 2,
+  "ano": 2025,
+  "limite": 500.00
+}
+```
+
+| Campo | Tipo | Validação | Descrição |
+|-------|------|-----------|-----------|
+| categoriaId | Integer | obrigatório, deve existir | ID da categoria |
+| mes | Integer | obrigatório, `@Mes` (1 a 12) | Mês do orçamento |
+| ano | Integer | obrigatório, `@Ano` (2000 a 2100) | Ano do orçamento |
+| limite | BigDecimal | obrigatório, > 0, máx 10 dígitos inteiros + 2 decimais | Limite de gasto no mês |
+
+---
+
+### OrcamentoResponseDTO
+
+Retornado nas operações com orçamentos (exemplo completo em [Orçamentos](#-orçamentos-orcamentocontroller)).
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | Long | ID do orçamento |
+| usuarioId | Long | ID do usuário dono |
+| categoriaId | Integer | ID da categoria |
+| nomeCategoria | String | Nome da categoria |
+| mes | Integer | Mês (1-12) |
+| ano | Integer | Ano |
+| limite | BigDecimal | Limite definido |
+| consumido | BigDecimal | Total de despesas na categoria no mês |
+| percentualUtilizado | Double | Percentual do limite já utilizado |
+| saldo | BigDecimal | Quanto ainda pode ser gasto (mínimo 0) |
+| alertaAtivo | Boolean | `true` a partir de 80% do limite |
+| dataCriacao | LocalDateTime | Data/hora de criação |
+| dataAtualizacao | LocalDateTime | Data/hora da última atualização |
 
 ---
 
@@ -908,10 +1111,10 @@ Resumo mensal para dashboard.
   "totalDespesas": 1200.50,
   "saldo": 3799.50,
   "despesasPorCategoria": [
-    { "categoria": "transporte", "total": 150.00 }
+    { "categoria": "Transporte", "total": 150.00 }
   ],
   "receitasPorCategoria": [
-    { "categoria": "salário", "total": 5000.00 }
+    { "categoria": "Salário", "total": 5000.00 }
   ]
 }
 ```
@@ -971,7 +1174,7 @@ Representa um slice do gráfico (categoria + total).
 
 ```json
 {
-  "categoria": "transporte",
+  "categoria": "Transporte",
   "total": 150.00
 }
 ```
@@ -1008,7 +1211,7 @@ CREATE TABLE categorias (
 );
 
 -- Categorias pré-carregadas via data.sql
--- Exemplo: alimentação, transporte, saúde, lazer, salário, etc.
+-- Transporte, Lazer, Contas da casa, Saúde, Compras, Salário, Freelance
 ```
 
 #### transacoes
@@ -1134,7 +1337,7 @@ export default api;
 ```javascript
 async function registrar(nome, email, senha) {
   try {
-    const response = await api.post('/users/register', {
+    const response = await api.post('/auth/registro', {
       nome,
       email,
       senha
@@ -1156,11 +1359,11 @@ async function login(email, senha) {
       email,
       senha
     });
-    const { token, userId, nome } = response.data;
+    const { token, usuarioId, nome } = response.data;
     
     // Salvar token no localStorage
     localStorage.setItem('token', token);
-    localStorage.setItem('userId', userId);
+    localStorage.setItem('usuarioId', usuarioId);
     localStorage.setItem('userName', nome);
     
     console.log('Login bem-sucedido!');
@@ -1174,15 +1377,18 @@ async function login(email, senha) {
 **Criar Transação**
 
 ```javascript
-async function criarTransacao(tipo, valor, idCategoria, descricao) {
+async function criarTransacao(tipo, valor, categoriaId, descricao) {
   try {
-    const response = await api.post('/transaction', {
+    const response = await api.post('/transacoes', {
       tipo,
       valor,
-      idCategoria,
+      categoriaId,
       descricao
     });
     console.log('Transação criada:', response.data);
+    if (response.data.alertaOrcamento) {
+      console.warn('Atenção: você já usou 80% ou mais do orçamento desta categoria no mês');
+    }
     return response.data;
   } catch (error) {
     console.error('Erro ao criar transação:', error.response.data);
@@ -1195,7 +1401,7 @@ async function criarTransacao(tipo, valor, idCategoria, descricao) {
 ```javascript
 async function listarTransacoes() {
   try {
-    const response = await api.get('/transaction');
+    const response = await api.get('/transacoes');
     console.log('Transações:', response.data);
     return response.data;
   } catch (error) {
@@ -1209,7 +1415,7 @@ async function listarTransacoes() {
 ```javascript
 async function listarTransacoesMes(mes, ano) {
   try {
-    const response = await api.get('/transaction/mes', {
+    const response = await api.get('/transacoes/mes', {
       params: { mes, ano }
     });
     console.log(`Transações de ${mes}/${ano}:`, response.data);
@@ -1225,7 +1431,7 @@ async function listarTransacoesMes(mes, ano) {
 ```javascript
 async function obterResumoMensal(mes, ano) {
   try {
-    const response = await api.get('/transaction/dashboard/resumo', {
+    const response = await api.get('/transacoes/dashboard/resumo', {
       params: { mes, ano }
     });
     console.log('Resumo:', response.data);
@@ -1241,7 +1447,7 @@ async function obterResumoMensal(mes, ano) {
 ```javascript
 async function obterEvolucaoAnual(ano) {
   try {
-    const response = await api.get('/transaction/dashboard/evolucao', {
+    const response = await api.get('/transacoes/dashboard/evolucao', {
       params: { ano }
     });
     console.log('Evolução:', response.data);
@@ -1255,9 +1461,9 @@ async function obterEvolucaoAnual(ano) {
 **Deletar Transação**
 
 ```javascript
-async function deletarTransacao(idTransacao) {
+async function deletarTransacao(id) {
   try {
-    await api.delete(`/transaction/${idTransacao}`);
+    await api.delete(`/transacoes/${id}`);
     console.log('Transação deletada!');
   } catch (error) {
     console.error('Erro ao deletar transação:', error.response.data);
@@ -1292,7 +1498,8 @@ async function fetchAPI(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Erro na requisição');
+    // Formato padrão de erro da API: { status, erro, campos?, timestamp }
+    throw new Error(error.erro || 'Erro na requisição');
   }
 
   return response.status === 204 ? null : response.json();
@@ -1311,7 +1518,7 @@ async function login(email, senha) {
   });
 
   localStorage.setItem('token', data.token);
-  localStorage.setItem('userId', data.userId);
+  localStorage.setItem('usuarioId', data.usuarioId);
   localStorage.setItem('userName', data.nome);
   
   console.log('Login bem-sucedido!');
@@ -1322,7 +1529,7 @@ async function login(email, senha) {
 
 ```javascript
 async function listarTransacoes() {
-  return fetchAPI('/transaction', { method: 'GET' });
+  return fetchAPI('/transacoes', { method: 'GET' });
 }
 ```
 
@@ -1333,7 +1540,7 @@ async function listarTransacoes() {
 **Registro**
 
 ```bash
-curl -X POST http://localhost:8080/api/users/register \
+curl -X POST http://localhost:8080/api/auth/registro \
   -H "Content-Type: application/json" \
   -d '{
     "nome": "João Silva",
@@ -1356,13 +1563,13 @@ curl -X POST http://localhost:8080/api/auth/login \
 **Criar Transação** (com token)
 
 ```bash
-curl -X POST http://localhost:8080/api/transaction \
+curl -X POST http://localhost:8080/api/transacoes \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer seu_token_aqui" \
   -d '{
     "tipo": "D",
     "valor": 150.00,
-    "idCategoria": 1,
+    "categoriaId": 1,
     "descricao": "Uber para o trabalho"
   }'
 ```
@@ -1370,22 +1577,36 @@ curl -X POST http://localhost:8080/api/transaction \
 **Listar Transações** (com token)
 
 ```bash
-curl -X GET http://localhost:8080/api/transaction \
+curl -X GET http://localhost:8080/api/transacoes \
   -H "Authorization: Bearer seu_token_aqui"
 ```
 
 **Resumo Mensal** (com token)
 
 ```bash
-curl -X GET "http://localhost:8080/api/transaction/dashboard/resumo?mes=2&ano=2025" \
+curl -X GET "http://localhost:8080/api/transacoes/dashboard/resumo?mes=2&ano=2025" \
+  -H "Authorization: Bearer seu_token_aqui"
+```
+
+**Dados do usuário logado** (com token)
+
+```bash
+curl -X GET http://localhost:8080/api/usuarios/me \
+  -H "Authorization: Bearer seu_token_aqui"
+```
+
+**Listar categorias** (com token)
+
+```bash
+curl -X GET http://localhost:8080/api/categorias \
   -H "Authorization: Bearer seu_token_aqui"
 ```
 
 ---
 
-## 🌍 Variáveis de Ambiente
+## 🌍 Variáveis de Ambiente do Frontend
 
-Para facilitar testes em diferentes ambientes, você pode usar variáveis:
+As variáveis do **backend** ficam no `.env` (veja [Setup e Instalação](#-setup-e-instalação)). As abaixo são do **frontend**, para facilitar testes em diferentes ambientes:
 
 ### .env.development
 
@@ -1409,21 +1630,24 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 ## 📋 Categorias Pré-carregadas
 
-As categorias são inseridas via `data.sql` ao iniciar a aplicação. Exemplos:
+As categorias são inseridas via `src/main/resources/data.sql` ao iniciar a aplicação e podem ser consultadas em `GET /api/categorias`:
 
 | ID | Nome |
 |:--:|------|
-| 1 | transporte |
-| 2 | alimentação |
-| 3 | saúde |
-| 4 | lazer |
-| 5 | salário |
-| ... | ... |
+| 1 | Transporte |
+| 2 | Lazer |
+| 3 | Contas da casa |
+| 4 | Saúde |
+| 5 | Compras |
+| 6 | Salário |
+| 7 | Freelance |
 
-Para adicionar novas categorias, insira um novo registro diretamente no banco:
+O `data.sql` roda a cada inicialização sem duplicar nada, e atualiza o nome das categorias que já existem (bancos antigos, com os nomes em inglês, passam a ver os nomes em português).
+
+Para adicionar uma nova categoria, inclua uma linha no `data.sql` com o próximo id, por exemplo `(8, 'Investimentos')`, ou insira direto no banco:
 
 ```sql
-INSERT INTO categorias (nome) VALUES ('nova_categoria');
+INSERT INTO categorias (nome) VALUES ('Investimentos');
 ```
 
 ---
@@ -1442,10 +1666,12 @@ INSERT INTO categorias (nome) VALUES ('nova_categoria');
 
 ## 🔒 Segurança
 
-- **Senhas**: Sempre hasheadas com Spring Security Crypto
-- **JWT**: Token com expiração de 24 horas
+- **Senhas**: Sempre hasheadas com BCrypt (Spring Security Crypto)
+- **JWT**: Token com expiração de 24 horas por padrão (`JWT_EXPIRATION`)
+- **Segredos**: Senha do banco e `JWT_SECRET` ficam no `.env`, fora do Git e da imagem Docker; o `application.yaml` não guarda nenhum segredo
 - **Rotas Protegidas**: Todas as rotas exceto login e registro requerem autenticação
-- **CORS**: Configure conforme necessário no `SecurityConfig`
+- **Dados por usuário**: Cada usuário só acessa os próprios dados, transações e orçamentos
+- **CORS**: Configure conforme necessário no `CorsConfig`
 - **HTTPS**: Use HTTPS em produção
 
 ---
@@ -1455,9 +1681,12 @@ INSERT INTO categorias (nome) VALUES ('nova_categoria');
 Para dúvidas sobre integração ou problemas técnicos, verifique:
 
 1. Se o servidor está rodando em `http://localhost:8080`
-2. Se o banco de dados PostgreSQL está configurado corretamente
-3. Se o token JWT está sendo enviado corretamente no header `Authorization`
-4. Se as credenciais do usuário estão corretas
+2. Se o `.env` existe na raiz do projeto, com `DB_PASSWORD` e `JWT_SECRET` (mínimo 32 caracteres) preenchidos
+3. Se o banco de dados PostgreSQL está configurado corretamente
+4. Se o token JWT está sendo enviado corretamente no header `Authorization`
+5. Se as credenciais do usuário estão corretas
+
+Veja também o [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
 ---
 
@@ -1467,6 +1696,6 @@ Este projeto é proprietário e desenvolvido para fins educacionais/internos.
 
 ---
 
-**Última atualização**: Fevereiro de 2025
+**Última atualização**: Novembro de 2026
 **Versão da API**: 1.0.0
 

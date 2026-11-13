@@ -33,6 +33,21 @@ if ($action -eq "help" -or $action -eq "?") {
 
 switch ($action.ToLower()) {
     "up" {
+        # O docker-compose.yml le DB_PASSWORD e JWT_SECRET do arquivo .env
+        if (-not (Test-Path ".env")) {
+            if (-not (Test-Path ".env.example")) {
+                Write-Host "[!] Arquivo .env nao encontrado (nem o .env.example para copiar)" -ForegroundColor Red
+                exit 1
+            }
+            Copy-Item ".env.example" ".env"
+            Write-Host "[!] Arquivo .env criado a partir do .env.example" -ForegroundColor Yellow
+            Write-Host "    Revise os valores antes de subir, principalmente:" -ForegroundColor Yellow
+            Write-Host "    - DB_PASSWORD: senha do Postgres (vale na primeira criacao do volume)" -ForegroundColor Yellow
+            Write-Host "    - JWT_SECRET: no minimo 32 caracteres (ex.: openssl rand -base64 48)" -ForegroundColor Yellow
+            Write-Host "    Depois rode de novo: .\docker-start.ps1 up" -ForegroundColor Cyan
+            exit 0
+        }
+
         Write-Host "[*] Iniciando containers..." -ForegroundColor Blue
         Write-Host "    - PostgreSQL em localhost:5432" -ForegroundColor Gray
         Write-Host "    - API em http://localhost:8080" -ForegroundColor Gray

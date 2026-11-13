@@ -1,14 +1,20 @@
 ### Arquivo de testes HTTP para VSCode REST Client
 ### Pressione "Send Request" em cada bloco ou use a extensão REST Client
 ### Atualizado com RF06 (Orçamento) e RF10 (Notificação de Orçamento)
+### Só login e registro dispensam token; todas as outras rotas precisam de Authorization: Bearer
 
 @baseUrl = http://localhost:8080/api
 @token =
+# Mês/ano atuais, calculados pelo REST Client na hora do envio: a transação é
+# gravada com a data de hoje, então o teste de alerta (RF10) precisa de um
+# orçamento do mês corrente.
+@mesAtual = {{$localDatetime 'M'}}
+@anoAtual = {{$localDatetime 'YYYY'}}
 
 ### ===== AUTENTICAÇÃO =====
 
 ### 1. Registrar novo usuário
-POST {{baseUrl}}/users/register
+POST {{baseUrl}}/auth/registro
 Content-Type: application/json
 
 {
@@ -29,179 +35,182 @@ Content-Type: application/json
 
 ### ===== USUÁRIOS =====
 
-### 3. Obter dados do usuário autenticado
-GET {{baseUrl}}/users/me
+### 3. Obter dados do usuário autenticado ({ id, nome, email, dataInclusao })
+# Não há rota para listar usuários nem buscar outro usuário por ID
+GET {{baseUrl}}/usuarios/me
 Authorization: Bearer {{token}}
 
-### 4. Listar todos os usuários
-GET {{baseUrl}}/users
-Authorization: Bearer {{token}}
+### ===== CATEGORIAS =====
 
-### 5. Buscar usuário por ID
-GET {{baseUrl}}/users/1
+### 4. Listar categorias ([{ id, nome }], em ordem alfabética)
+# 1 Transporte, 2 Lazer, 3 Contas da casa, 4 Saúde, 5 Compras, 6 Salário, 7 Freelance
+GET {{baseUrl}}/categorias
 Authorization: Bearer {{token}}
 
 ### ===== TRANSAÇÕES - CRUD =====
 
-### 6. Criar nova transação (Despesa)
-POST {{baseUrl}}/transaction
+### 5. Criar nova transação (Despesa em Transporte)
+POST {{baseUrl}}/transacoes
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
 "tipo": "D",
 "valor": 150.50,
-"idCategoria": 1,
+"categoriaId": 1,
 "descricao": "Uber para o trabalho"
 }
 
-### 7. Criar transação (Receita)
-POST {{baseUrl}}/transaction
+### 6. Criar transação (Receita em Salário)
+POST {{baseUrl}}/transacoes
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
 "tipo": "R",
 "valor": 5000.00,
-"idCategoria": 6,
+"categoriaId": 6,
 "descricao": "Salário mensal"
 }
 
-### 8. Listar todas as transações
-GET {{baseUrl}}/transaction
+### 7. Listar todas as transações
+GET {{baseUrl}}/transacoes
 Authorization: Bearer {{token}}
 
-### 9. Deletar transação por ID
-DELETE {{baseUrl}}/transaction/1
+### 8. Deletar transação por ID
+DELETE {{baseUrl}}/transacoes/1
 Authorization: Bearer {{token}}
 
 ### ===== TRANSAÇÕES - FILTROS =====
 
-### 10. Filtrar por tipo (Despesas)
-GET {{baseUrl}}/transaction/tipo/D
+### 9. Filtrar por tipo (Despesas)
+GET {{baseUrl}}/transacoes/tipo/D
 Authorization: Bearer {{token}}
 
-### 11. Filtrar por tipo (Receitas)
-GET {{baseUrl}}/transaction/tipo/R
+### 10. Filtrar por tipo (Receitas)
+GET {{baseUrl}}/transacoes/tipo/R
 Authorization: Bearer {{token}}
 
-### 12. Filtrar por mês e ano
-GET {{baseUrl}}/transaction/mes?mes=2&ano=2025
+### 11. Filtrar por mês e ano
+GET {{baseUrl}}/transacoes/mes?mes={{mesAtual}}&ano={{anoAtual}}
 Authorization: Bearer {{token}}
 
-### 13. Filtrar por período de datas
-GET {{baseUrl}}/transaction/periodo?inicio=2025-01-01&fim=2025-02-28
+### 12. Filtrar por período de datas
+GET {{baseUrl}}/transacoes/periodo?inicio=2025-01-01&fim=2025-02-28
 Authorization: Bearer {{token}}
 
-### 14. Filtrar por categoria
-GET {{baseUrl}}/transaction/categoria/1
+### 13. Filtrar por categoria
+GET {{baseUrl}}/transacoes/categoria/1
 Authorization: Bearer {{token}}
 
 ### ===== DASHBOARD =====
 
-### 15. Resumo mensal (totais + breakdown por categoria)
-GET {{baseUrl}}/transaction/dashboard/resumo?mes=2&ano=2025
+### 14. Resumo mensal (totais + breakdown por categoria)
+GET {{baseUrl}}/transacoes/dashboard/resumo?mes={{mesAtual}}&ano={{anoAtual}}
 Authorization: Bearer {{token}}
 
-### 16. Evolução anual (mês a mês)
-GET {{baseUrl}}/transaction/dashboard/evolucao?ano=2025
+### 15. Evolução anual (mês a mês)
+GET {{baseUrl}}/transacoes/dashboard/evolucao?ano={{anoAtual}}
 Authorization: Bearer {{token}}
 
 ### ===== ORÇAMENTOS (RF06 - Orçamento Mensal) =====
 
-### 17. Criar orçamento mensal para uma categoria
-# Define que o usuário quer gastar no máximo R$ 500 em "transport" em Fev/2025
+### 16. Criar orçamento mensal para uma categoria
+# Define que o usuário quer gastar no máximo R$ 500 em "Transporte" em Fev/2025
 POST {{baseUrl}}/orcamentos
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-"idCategoria": 1,
+"categoriaId": 1,
 "mes": 2,
 "ano": 2025,
 "limite": 500.00
 }
 
-### 18. Listar todos os orçamentos do usuário
+### 17. Listar todos os orçamentos do usuário
 GET {{baseUrl}}/orcamentos
 Authorization: Bearer {{token}}
 
-### 19. Buscar orçamento específico
+### 18. Buscar orçamento específico
 GET {{baseUrl}}/orcamentos/1
 Authorization: Bearer {{token}}
 
-### 20. Listar orçamentos de um mês específico
+### 19. Listar orçamentos de um mês específico
 GET {{baseUrl}}/orcamentos/mes?mes=2&ano=2025
 Authorization: Bearer {{token}}
 
-### 21. Buscar orçamento de uma categoria em um mês
+### 20. Buscar orçamento de uma categoria em um mês (/categoria/{categoriaId}/mes)
 GET {{baseUrl}}/orcamentos/categoria/1/mes?mes=2&ano=2025
 Authorization: Bearer {{token}}
 
-### 22. Atualizar limite de orçamento
+### 21. Atualizar limite de orçamento
 PUT {{baseUrl}}/orcamentos/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-"idCategoria": 1,
+"categoriaId": 1,
 "mes": 2,
 "ano": 2025,
 "limite": 600.00
 }
 
-### 23. Deletar orçamento
+### 22. Deletar orçamento
 DELETE {{baseUrl}}/orcamentos/1
 Authorization: Bearer {{token}}
 
 ### ===== TESTE RF10: Notificação de Orçamento (80% do limite) =====
+# Usa a categoria 2 (Lazer), que precisa estar sem despesas no mês atual,
+# senão as porcentagens abaixo mudam (o consumo soma todas as despesas do mês).
 
-### 24. [SETUP] Criar orçamento de R$ 300 para transport em Fev/2025
+### 23. [SETUP] Criar orçamento de R$ 300 para Lazer no mês atual
 POST {{baseUrl}}/orcamentos
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-"idCategoria": 1,
-"mes": 2,
-"ano": 2025,
+"categoriaId": 2,
+"mes": {{mesAtual}},
+"ano": {{anoAtual}},
 "limite": 300.00
 }
 
-### 25. [TESTE] Criar despesa de R$ 150 (50% do orçamento)
+### 24. [TESTE] Criar despesa de R$ 150 (50% do orçamento)
 # Resposta: alertaOrcamento será FALSE (ainda é só 50%)
-POST {{baseUrl}}/transaction
+POST {{baseUrl}}/transacoes
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
 "tipo": "D",
 "valor": 150.00,
-"idCategoria": 1,
+"categoriaId": 2,
 "descricao": "Primeira despesa - sem alerta ainda"
 }
 
-### 26. [TESTE] Criar despesa de R$ 100 (total 250 = 83% do orçamento)
+### 25. [TESTE] Criar despesa de R$ 100 (total 250 = 83% do orçamento)
 # Resposta: alertaOrcamento será TRUE (ultrapassou 80%!)
 # ISSO ATIVA O ALERTA NO FRONTEND (RF10) ✅
-POST {{baseUrl}}/transaction
+POST {{baseUrl}}/transacoes
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
 "tipo": "D",
 "valor": 100.00,
-"idCategoria": 1,
+"categoriaId": 2,
 "descricao": "Segunda despesa - DEVE ativar alerta de orçamento"
 }
 
-### 27. [VERIFICAÇÃO] Consultar resumo do mês para ver o consumo
-GET {{baseUrl}}/transaction/dashboard/resumo?mes=2&ano=2025
+### 26. [VERIFICAÇÃO] Consultar o orçamento do mês para ver o consumo
+# Esperado: consumido 250, percentualUtilizado 83.0, saldo 50, alertaAtivo true
+GET {{baseUrl}}/orcamentos/categoria/2/mes?mes={{mesAtual}}&ano={{anoAtual}}
 Authorization: Bearer {{token}}
 
 ### ===== TESTES DE ERRO =====
 
-### 28. Teste: Login com email inválido
+### 27. Teste: Login com email inválido (deve retornar 401)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -210,33 +219,33 @@ Content-Type: application/json
 "senha": "senha123"
 }
 
-### 29. Teste: Criar transação sem autenticação
-POST {{baseUrl}}/transaction
+### 28. Teste: Criar transação sem autenticação (deve retornar 401)
+POST {{baseUrl}}/transacoes
 Content-Type: application/json
 
 {
 "tipo": "D",
 "valor": 100.00,
-"idCategoria": 1
+"categoriaId": 1
 }
 
-### 30. Teste: Token inválido (deve retornar 401)
-GET {{baseUrl}}/transaction
+### 29. Teste: Token inválido (deve retornar 401)
+GET {{baseUrl}}/transacoes
 Authorization: Bearer token_invalido_qualquer_coisa
 
-### 31. Teste: Validação - valor negativo
-POST {{baseUrl}}/transaction
+### 30. Teste: Validação - valor negativo (deve retornar 400)
+POST {{baseUrl}}/transacoes
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
 "tipo": "D",
 "valor": -50.00,
-"idCategoria": 1
+"categoriaId": 1
 }
 
-### 32. Teste: Email duplicado no registro
-POST {{baseUrl}}/users/register
+### 31. Teste: Email duplicado no registro (deve retornar 409)
+POST {{baseUrl}}/auth/registro
 Content-Type: application/json
 
 {
@@ -245,16 +254,20 @@ Content-Type: application/json
 "senha": "senha456"
 }
 
-### 33. Teste: Orçamento duplicado (mesmo mês/categoria)
+### 32. Teste: Orçamento duplicado (mesmo mês/categoria, deve retornar 409)
 # Depois de criar um, tente criar outro igual
 POST {{baseUrl}}/orcamentos
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-"idCategoria": 1,
+"categoriaId": 1,
 "mes": 2,
 "ano": 2025,
 "limite": 400.00
 }
+
+### 33. Teste: Rota de listar usuários não existe mais (deve retornar 404)
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{token}}
 
