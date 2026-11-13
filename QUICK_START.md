@@ -37,27 +37,27 @@ postgres_1 | database system is ready to accept connections
 http://localhost:8080/api
 ```
 
-### 6. Testar rápido (em outro terminal)
+### 6. Testar rápido (em outro terminal PowerShell)
 ```powershell
-# Registrar usuário
-curl -X POST http://localhost:8080/api/auth/registro `
-  -H "Content-Type: application/json" `
-  -d '{
-    "nome":"Teste",
-    "email":"teste@example.com",
-    "senha":"senha123"
-  }'
+$api = "http://localhost:8080/api"
+$json = "application/json; charset=utf-8"
 
-# Login
-curl -X POST http://localhost:8080/api/auth/login `
-  -H "Content-Type: application/json" `
-  -d '{
-    "email":"teste@example.com",
-    "senha":"senha123"
-  }'
+# Registrar usuário
+$body = @{ nome = "Teste"; email = "teste@example.com"; senha = "senha123" } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "$api/auth/registro" -ContentType $json -Body $body
+
+# Login (guarda o token em $token)
+$body = @{ email = "teste@example.com"; senha = "senha123" } | ConvertTo-Json
+$login = Invoke-RestMethod -Method Post -Uri "$api/auth/login" -ContentType $json -Body $body
+$token = $login.token
+
+# Rota protegida, com o token
+Invoke-RestMethod -Uri "$api/categorias" -Headers @{ Authorization = "Bearer $token" }
 ```
 
 O login devolve `{ "token": "...", "tipo": "Bearer", "usuarioId": 1, "nome": "Teste" }`. Use o token no header `Authorization: Bearer <token>` nas outras rotas, por exemplo `GET /api/usuarios/me`, `GET /api/categorias` e `GET /api/transacoes`.
+
+> No Windows PowerShell 5.1, `curl` é apelido do `Invoke-WebRequest` e não aceita `-X`/`-H`/`-d`. Por isso os exemplos usam `Invoke-RestMethod`. No Git Bash, os exemplos com `curl` do [README](./README.md#3-com-curl-testes) funcionam como estão.
 
 ---
 
@@ -66,7 +66,7 @@ O login devolve `{ "token": "...", "tipo": "Bearer", "usuarioId": 1, "nome": "Te
 - [ ] Ler [DOCKER_SETUP.md](./DOCKER_SETUP.md) para mais detalhes
 - [ ] Testar endpoints em [requests.http](./requests.http) (com VSCode REST Client)
 - [ ] Rodar os testes automatizados: `.\gradlew.bat test` (não precisa de Postgres nem Docker; veja o [README](./README.md#-testes-automatizados))
-- [ ] Conectar seu frontend Angular em `localhost:4200` (CORS já está configurado ✅)
+- [ ] Subir o front (meu-norte-front): `npm ci` e `npm run dev`, depois abrir `http://localhost:3000` (veja o [README](./README.md#-integração-com-o-frontend-nextjs))
 
 ---
 

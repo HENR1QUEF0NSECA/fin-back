@@ -59,18 +59,19 @@ https://seu-projeto-XXXXX.railway.app/api
 ## 🔗 Testar URL Online
 
 ```powershell
+$api = "https://seu-projeto-XXXXX.railway.app/api"
+$json = "application/json; charset=utf-8"
+
 # Teste se está respondendo (sem token deve voltar 401 em JSON: a API está no ar)
-curl https://seu-projeto-XXXXX.railway.app/api/categorias
+curl.exe -i "$api/categorias"
 
 # Cadastrar um usuário
-curl -X POST https://seu-projeto-XXXXX.railway.app/api/auth/registro `
-  -H "Content-Type: application/json" `
-  -d '{"nome":"Teste","email":"teste@test.com","senha":"senha123"}'
+$body = @{ nome = "Teste"; email = "teste@test.com"; senha = "senha123" } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "$api/auth/registro" -ContentType $json -Body $body
 
 # Login (devolve token, tipo, usuarioId e nome)
-curl -X POST https://seu-projeto-XXXXX.railway.app/api/auth/login `
-  -H "Content-Type: application/json" `
-  -d '{"email":"teste@test.com","senha":"senha123"}'
+$body = @{ email = "teste@test.com"; senha = "senha123" } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "$api/auth/login" -ContentType $json -Body $body
 ```
 
 ---
@@ -82,13 +83,13 @@ Copie o link e compartilhe:
 https://seu-projeto-XXXXX.railway.app/api
 ```
 
-Seu Angular pode chamar de qualquer lugar agora! 🌍
+Para o front usar a API publicada, defina `BACKEND_URL=https://seu-projeto-XXXXX.railway.app/api` no `.env.local` do meu-norte-front. 🌍
 
 ---
 
 ## 💡 Notas
 
-- Railway oferece **free tier generoso** para estudiantes
+- Railway oferece **free tier generoso** para estudantes
 - Se acabar crédito gratuito, você pode adicionar cartão de crédito
 - Alternativamente, tente **Render** ou **Heroku**
 - Lembre-se: dados no banco de dados persistem entre deploys

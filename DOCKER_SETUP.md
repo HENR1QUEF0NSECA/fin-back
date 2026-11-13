@@ -58,50 +58,22 @@ docker-compose down -v
 
 ---
 
-## 🔗 Integração com Angular
+## 🔗 Integração com o Frontend (Next.js)
 
 ### URL Base da API:
 ```
 http://localhost:8080/api
 ```
 
+O frontend do projeto é o **meu-norte-front** (Next.js, em `http://localhost:3000`). Ele não chama a API direto do navegador: as rotas do próprio Next repassam as chamadas pelo servidor, com o JWT guardado num cookie `httpOnly`. O endereço da API vem da variável `BACKEND_URL` do front (padrão `http://localhost:8080/api`), então com o Docker rodando basta fazer `npm ci` e `npm run dev` no front.
+
+Detalhes no [README](./README.md#-integração-com-o-frontend-nextjs).
+
 ### CORS Configurado para:
-- `http://localhost:4200` (Angular dev)
-- `http://localhost:3000` (alternativa)
+- `http://localhost:3000` (Next.js)
+- `http://localhost:4200` (outro front local, se precisar)
 
-### Exemplo: Interceptador Axios (TypeScript/Angular)
-
-```typescript
-import axios, { AxiosInstance } from 'axios';
-
-const api: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:8080/api',
-  timeout: 10000,
-});
-
-// Interceptador para adicionar JWT token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Interceptador para tratar erros
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
-export default api;
-```
+O meu-norte-front não depende de CORS, porque as chamadas saem do servidor do Next. A liberação serve para um front que chame a API direto do navegador.
 
 ---
 
@@ -150,15 +122,7 @@ Content-Type: application/json
 }
 ```
 
-**Guarde o `token` no `localStorage`:**
-```typescript
-const response = await api.post('/auth/login', {
-  email: 'joao@example.com',
-  senha: 'senha123'
-});
-
-localStorage.setItem('token', response.data.token);
-```
+**Guarde o `token`** para mandar nas próximas requisições. O meu-norte-front guarda num cookie `httpOnly`, fora do alcance do JavaScript da página (veja a seção [Integração com o Frontend](#-integração-com-o-frontend-nextjs)).
 
 ### 3️⃣ Usar Token em Requisições
 ```http
@@ -322,7 +286,9 @@ Ou via interface SQL (DBeaver, pgAdmin) conectando em `localhost:5432` (ou na po
 
 ---
 
-## 🧪 Testar com cURL
+## 🧪 Testar pelo PowerShell
+
+Os exemplos usam `Invoke-RestMethod`, que já monta o JSON e lê a resposta. Funciona no Windows PowerShell 5.1 e no PowerShell 7. (No 5.1, `curl` é apelido do `Invoke-WebRequest` e não aceita `-X`/`-H`/`-d`; o curl de verdade é o `curl.exe`.)
 
 ### Registrar
 ```powershell
@@ -332,9 +298,8 @@ $body = @{
     senha = "senha123"
 } | ConvertTo-Json
 
-curl -X POST http://localhost:8080/api/auth/registro `
-  -H "Content-Type: application/json" `
-  -d $body
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/auth/registro `
+  -ContentType "application/json; charset=utf-8" -Body $body
 ```
 
 ### Login
@@ -344,18 +309,17 @@ $body = @{
     senha = "senha123"
 } | ConvertTo-Json
 
-$response = curl -X POST http://localhost:8080/api/auth/login `
-  -H "Content-Type: application/json" `
-  -d $body
+$response = Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/auth/login `
+  -ContentType "application/json; charset=utf-8" -Body $body
 
-$token = ($response | ConvertFrom-Json).token
+$token = $response.token
 Write-Host "Token: $token"
 ```
 
 ### Listar transações (com token)
 ```powershell
-curl -X GET http://localhost:8080/api/transacoes `
-  -H "Authorization: Bearer $token"
+Invoke-RestMethod -Uri http://localhost:8080/api/transacoes `
+  -Headers @{ Authorization = "Bearer $token" }
 ```
 
 ---
@@ -446,7 +410,7 @@ Tokens expiram em 24 horas. Faça login novamente para obter novo token.
 - Banco de dados **persiste** em volumes Docker (dados não são perdidos ao reiniciar)
 - Para **limpar tudo**, use: `docker-compose down -v`
 - JWT expira em **24h** (86400000 ms) — ajuste em `JWT_EXPIRATION` no `.env` se necessário
-- CORS está configurado para `localhost:4200` (Angular) e `localhost:3000` — adicione outras origens conforme necessário em `CorsConfig.java`
+- CORS está configurado para `localhost:3000` (front Next.js) e `localhost:4200`; adicione outras origens conforme necessário em `CorsConfig.java`
 - O `Dockerfile` gera a imagem com `-x test`; os testes automatizados rodam separados, com `.\gradlew.bat test` (veja o [README](./README.md#-testes-automatizados))
 
 ---

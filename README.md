@@ -10,7 +10,7 @@
 
 - [Início Rápido](#-início-rápido)
 - [Docker Setup](#-docker-setup)
-- [Integração Angular](#-integração-angular)
+- [Integração com o Frontend (Next.js)](#-integração-com-o-frontend-nextjs)
 - [Visão Geral](#-visão-geral)
 - [Setup e Instalação](#-setup-e-instalação) (configuração pelo `.env`)
 - [Testes Automatizados](#-testes-automatizados)
@@ -65,11 +65,27 @@ Quer compartilhar um link com seu professor? Veja [RAILWAY_DEPLOY.md](./RAILWAY_
 
 ---
 
-## 🅰️ Integração Angular
+## 🔗 Integração com o Frontend (Next.js)
 
-### CORS já configurado ✅
+O frontend do projeto é o **meu-norte-front** (Next.js), que roda em `http://localhost:3000` e consome esta API em `http://localhost:8080/api`.
 
-O projeto já possui configuração de CORS para Angular local em `localhost:4200`.
+O navegador não chama a API direto: as rotas do próprio Next fazem o meio de campo (padrão BFF).
+
+| Rota do front | Chama na API | O que faz |
+|---|---|---|
+| `POST /api/auth/login` | `POST /api/auth/login` | Guarda o JWT recebido num cookie `httpOnly` |
+| `POST /api/auth/register` | `POST /api/auth/registro` | Cadastra o usuário |
+| `/api/backend/<caminho>` | `/api/<caminho>` | Repassa a chamada com `Authorization: Bearer <token do cookie>` |
+
+Para rodar os dois juntos:
+
+1. Suba a API (veja o [QUICK_START.md](./QUICK_START.md)).
+2. No meu-norte-front: `npm ci` e `npm run dev`. O endereço da API vem da variável `BACKEND_URL` do front (padrão `http://localhost:8080/api`).
+3. Abra `http://localhost:3000`.
+
+O front lê os erros pelo formato padrão `{ status, erro, campos?, timestamp }` (veja [Formato das respostas de erro](#formato-das-respostas-de-erro)) e mostra na tela a mensagem de cada campo em `campos` ou, se não houver, a do campo `erro`.
+
+**CORS:** como as chamadas saem do servidor do Next, o front não depende de CORS. Mesmo assim, o `CorsConfig` libera `localhost:3000` e `localhost:4200` para um front que chame a API direto do navegador.
 
 ### Teste Rápido de Endpoints
 
@@ -1278,6 +1294,7 @@ Todo erro, inclusive o 401 do filtro JWT, sai do `GlobalExceptionHandler` no mes
 - `erro`: mensagem em português, pronta para mostrar ao usuário.
 - `campos`: só em erro de validação, com uma mensagem por campo (do body ou da query).
 - Nunca expõe SQL, nomes de classes Java ou stack trace.
+- Sai com `Content-Type: application/json;charset=UTF-8`, como as respostas de sucesso, então os acentos chegam certos em qualquer cliente.
 
 Os services lançam exceções próprias (pacote `exception`), e o status vem do tipo da exceção:
 
@@ -1295,6 +1312,8 @@ Mês e ano são validados pelas anotações `@Mes` (1 a 12) e `@Ano` (2000 a 210
 ---
 
 ## 🔌 Exemplos de Integração Frontend
+
+> Exemplos genéricos, para um front que chame a API direto do navegador. O meu-norte-front não precisa disso: ele usa as rotas do Next descritas em [Integração com o Frontend (Next.js)](#-integração-com-o-frontend-nextjs).
 
 ### 1. Com Axios (JavaScript/React)
 
@@ -1606,24 +1625,17 @@ curl -X GET http://localhost:8080/api/categorias \
 
 ## 🌍 Variáveis de Ambiente do Frontend
 
-As variáveis do **backend** ficam no `.env` (veja [Setup e Instalação](#-setup-e-instalação)). As abaixo são do **frontend**, para facilitar testes em diferentes ambientes:
+As variáveis do **backend** ficam no `.env` (veja [Setup e Instalação](#-setup-e-instalação)). As do **frontend** (meu-norte-front) ficam no `.env.local` dele e são opcionais:
 
-### .env.development
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `BACKEND_URL` | `http://localhost:8080/api` | Endereço desta API |
+| `SESSION_COOKIE_NAME` | `finplan_session` | Nome do cookie que guarda o JWT |
+
+Para apontar o front para a API publicada (por exemplo no Railway):
 
 ```env
-REACT_APP_API_URL=http://localhost:8080/api
-```
-
-### .env.production
-
-```env
-REACT_APP_API_URL=https://api.finance-app.com/api
-```
-
-### Uso no Frontend
-
-```javascript
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+BACKEND_URL=https://seu-projeto-XXXXX.railway.app/api
 ```
 
 ---
@@ -1654,8 +1666,8 @@ INSERT INTO categorias (nome) VALUES ('Investimentos');
 
 ## 🚀 Boas Práticas de Integração
 
-1. **Armazenar Token**: Guarde o token JWT no `localStorage` ou `sessionStorage`
-2. **Remover Token**: Limpe o token ao fazer logout
+1. **Armazenar Token**: Prefira um cookie `httpOnly`, como o meu-norte-front faz, que o JavaScript da página não consegue ler. `localStorage` funciona, mas fica exposto a scripts injetados (XSS)
+2. **Remover Token**: Limpe o token ao fazer logout e quando a API responder 401 (token expirado)
 3. **Validar Entrada**: Sempre valide dados no frontend antes de enviar
 4. **Tratar Erros**: Implemente tratamento de erros adequado
 5. **Interceptadores**: Use interceptadores para adicionar token automaticamente

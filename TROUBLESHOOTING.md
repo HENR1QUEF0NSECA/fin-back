@@ -185,7 +185,7 @@ API não está rodando
 docker-compose ps
 
 # Testar se API responde (sem token, deve voltar 401 em JSON: a API está no ar)
-curl http://localhost:8080/api/categorias
+curl.exe -i http://localhost:8080/api/categorias
 ```
 
 **Se não responder:** `docker-compose logs app`
@@ -214,29 +214,31 @@ Só `POST /api/auth/login` e `POST /api/auth/registro` funcionam sem token.
 
 ---
 
-#### ❌ "CORS error" no Angular
+#### ❌ "CORS error" ao chamar a API do navegador
 ```
-Angular não consegue chamar a API
+Um front que chama a API direto do navegador recebe erro de CORS
 ```
 **Mensagem típica:**
 ```
-Access to XMLHttpRequest at 'http://localhost:8080/api/...'
-from origin 'http://localhost:4200' has been blocked by CORS policy
+Access to fetch at 'http://localhost:8080/api/...'
+from origin 'http://localhost:5173' has been blocked by CORS policy
 ```
+
+> O meu-norte-front (Next.js) não passa por isso: as chamadas dele saem do servidor do Next, e CORS só vale para chamadas feitas pelo navegador.
 
 **Soluções:**
 
-A) **Verificar se CORS está ativado:**
+A) **Verificar a configuração:**
 - Arquivo: `src/main/java/com/ufu/finance/config/CorsConfig.java`
-- Deve ter `@Configuration` e métodos de CORS
+- Hoje libera `localhost:3000` e `localhost:4200` (e os mesmos em `127.0.0.1`)
 
 B) **Adicionar mais origens** (se necessário):
 ```java
 config.setAllowedOrigins(List.of(
-        "http://localhost:4200",
         "http://localhost:3000",
-        "http://127.0.0.1:4200",
+        "http://localhost:4200",
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:4200",
         "http://seu-dominio.com"  // Adicione aqui
 ));
 ```
@@ -247,10 +249,21 @@ docker-compose down
 docker-compose up --build
 ```
 
-D) **Verificar headers de resposta:**
+D) **Verificar headers de resposta** (use `curl.exe`: no PowerShell 5.1, `curl` é apelido do `Invoke-WebRequest`):
 ```powershell
-curl -i http://localhost:8080/api/categorias -H "Origin: http://localhost:4200"
-# Procure por: Access-Control-Allow-...
+curl.exe -i http://localhost:8080/api/categorias -H "Origin: http://localhost:3000"
+# Procure por: Access-Control-Allow-Origin: http://localhost:3000
+```
+
+E) **Testar o preflight (OPTIONS):**
+```powershell
+curl.exe -i -X OPTIONS http://localhost:8080/api/transacoes -H "Origin: http://localhost:3000" -H "Access-Control-Request-Method: GET"
+```
+
+Deve retornar 200 com headers como:
+```
+Access-Control-Allow-Origin: http://localhost:3000
+Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
 ```
 
 ---
@@ -276,37 +289,23 @@ Exemplo de erro:
 
 ---
 
-### 4. Frontend Angular
+### 4. Frontend (Next.js)
 
-#### ❌ "CORS Headers não aparecem"
+#### ❌ O front abre, mas as chamadas falham ou voltam para o login
 
-Teste manualmente:
-```powershell
-curl -X OPTIONS http://localhost:8080/api/transacoes \
-  -H "Origin: http://localhost:4200" \
-  -H "Access-Control-Request-Method: GET" \
-  -v
-```
-
-Deve retornar headers como:
-```
-Access-Control-Allow-Origin: http://localhost:4200
-Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
-```
+- Confira se a API está no ar: `curl.exe -i http://localhost:8080/api/categorias` (deve voltar 401 em JSON)
+- Confira o `BACKEND_URL` no `.env.local` do front (padrão `http://localhost:8080/api`, com o `/api` no final) e reinicie o `npm run dev` depois de mudar
+- Se o `JWT_SECRET` do `.env` mudou, os tokens antigos deixam de valer: o front manda para o login, e basta entrar de novo
 
 ---
 
-#### ❌ "Token não persiste" no Angular
+#### ❌ "Login não persiste"
 
-Verifique localStorage:
-```typescript
-// No console do navegador (F12)
-localStorage.getItem('token')
-```
+O meu-norte-front guarda o JWT num cookie `httpOnly` (`finplan_session`, ou o nome definido em `SESSION_COOKIE_NAME`), que o JavaScript da página não enxerga. Para conferir: F12 → Application → Cookies → `http://localhost:3000`.
 
-Se estiver nulo, significa:
-- Token não foi salvo após login
-- Verifique seu serviço Angular: `localStorage.setItem('token', response.data.token)`
+Se o cookie não aparece depois do login:
+- Veja a resposta de `POST /api/auth/login` na aba Network (F12): um erro da API vem no corpo, no formato `{ status, erro, ... }`
+- Veja o terminal do `npm run dev`: falhas ao falar com a API aparecem lá
 
 ---
 
