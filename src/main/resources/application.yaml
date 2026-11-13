@@ -26,6 +26,14 @@ spring:
       mode: always
       encoding: UTF-8
 
+  # Declara o charset nas respostas (application/json;charset=UTF-8). Sem isso,
+  # clientes que não assumem UTF-8 sozinhos, como o Invoke-RestMethod do
+  # PowerShell 5.1, mostram os acentos errados ("SalÃ¡rio").
+  servlet:
+    encoding:
+      charset: UTF-8
+      force-response: true
+
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}

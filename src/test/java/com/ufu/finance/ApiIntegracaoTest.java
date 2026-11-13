@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,6 +35,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ApiIntegracaoTest {
 
     private static final String SENHA = "senha123";
+
+    /** Toda resposta JSON declara o charset, para clientes que não assumem UTF-8. */
+    private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 
     @Autowired
     private MockMvc mvc;
@@ -70,6 +74,7 @@ class ApiIntegracaoTest {
 
         mvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(JSON_UTF8))
                 .andExpect(jsonPath("$.email").value(email))
                 .andExpect(jsonPath("$.nome").value("Usuário Teste"))
                 .andExpect(jsonPath("$.senha").doesNotExist());
@@ -104,6 +109,7 @@ class ApiIntegracaoTest {
     void rotaProtegidaSemToken() throws Exception {
         mvc.perform(get("/api/transacoes"))
                 .andExpect(status().isUnauthorized())
+                .andExpect(content().contentType(JSON_UTF8))
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.erro").value("Token não fornecido"))
                 .andExpect(jsonPath("$.timestamp").exists());
@@ -193,6 +199,7 @@ class ApiIntegracaoTest {
 
         comToken(post("/api/transacoes"), token, "{'tipo':'D','valor':0}")
                 .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(JSON_UTF8))
                 .andExpect(jsonPath("$.erro").value("Dados inválidos"))
                 .andExpect(jsonPath("$.campos.valor").value("Valor deve ser maior que zero"))
                 .andExpect(jsonPath("$.campos.categoriaId").value("Categoria é obrigatória"));

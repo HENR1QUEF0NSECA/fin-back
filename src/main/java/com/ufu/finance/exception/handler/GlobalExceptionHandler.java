@@ -7,6 +7,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.util.ClassUtils;
@@ -23,6 +24,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.exc.MismatchedInputException;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -48,6 +50,8 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private static final MediaType JSON_UTF8 = new MediaType(MediaType.APPLICATION_JSON, StandardCharsets.UTF_8);
 
     // ─── Regras de negócio (lançadas pelos services) ──────────────────────────
 
@@ -171,7 +175,9 @@ public class GlobalExceptionHandler {
             corpo.put("campos", campos);
         }
         corpo.put("timestamp", LocalDateTime.now());
-        return ResponseEntity.status(status).headers(headers).body(corpo);
+        // Content-Type explícito: o Spring limpa o da resposta antes de chamar o
+        // handler de erro, e sem isso o charset=UTF-8 das respostas de sucesso se perderia.
+        return ResponseEntity.status(status).headers(headers).contentType(JSON_UTF8).body(corpo);
     }
 
     private static String mensagemPadrao(HttpStatusCode status) {
