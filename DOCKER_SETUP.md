@@ -65,7 +65,7 @@ docker-compose down -v
 http://localhost:8080/api
 ```
 
-O frontend do projeto é o **meu-norte-front** (Next.js, em `http://localhost:3000`). Ele não chama a API direto do navegador: as rotas do próprio Next repassam as chamadas pelo servidor, com o JWT guardado num cookie `httpOnly`. O endereço da API vem da variável `BACKEND_URL` do front (padrão `http://localhost:8080/api`), então com o Docker rodando basta fazer `npm ci` e `npm run dev` no front.
+O frontend do projeto é o **[fin-front](https://github.com/HENR1QUEF0NSECA/fin-front)** (Next.js, em `http://localhost:3000`). Ele não chama a API direto do navegador: as rotas do próprio Next repassam as chamadas pelo servidor, com o JWT guardado num cookie `httpOnly`. O endereço da API vem da variável `BACKEND_URL` do front (padrão `http://localhost:8080/api`), então com o Docker rodando basta fazer `npm ci` e `npm run dev` no front.
 
 Detalhes no [README](./README.md#-integração-com-o-frontend-nextjs).
 
@@ -73,7 +73,7 @@ Detalhes no [README](./README.md#-integração-com-o-frontend-nextjs).
 - `http://localhost:3000` (Next.js)
 - `http://localhost:4200` (outro front local, se precisar)
 
-O meu-norte-front não depende de CORS, porque as chamadas saem do servidor do Next. A liberação serve para um front que chame a API direto do navegador.
+O fin-front não depende de CORS, porque as chamadas saem do servidor do Next. A liberação serve para um front que chame a API direto do navegador.
 
 ---
 
@@ -122,7 +122,7 @@ Content-Type: application/json
 }
 ```
 
-**Guarde o `token`** para mandar nas próximas requisições. O meu-norte-front guarda num cookie `httpOnly`, fora do alcance do JavaScript da página (veja a seção [Integração com o Frontend](#-integração-com-o-frontend-nextjs)).
+**Guarde o `token`** para mandar nas próximas requisições. O fin-front guarda num cookie `httpOnly`, fora do alcance do JavaScript da página (veja a seção [Integração com o Frontend](#-integração-com-o-frontend-nextjs)).
 
 ### 3️⃣ Usar Token em Requisições
 ```http

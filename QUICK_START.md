@@ -7,7 +7,8 @@
 
 ### 2. Clonar e navegar
 ```powershell
-cd caminho\para\meu-norte-back
+git clone https://github.com/HENR1QUEF0NSECA/fin-back.git
+cd fin-back
 ```
 
 ### 3. Criar o `.env`
@@ -15,7 +16,7 @@ Senha do banco e segredo do JWT ficam no arquivo `.env` (fora do Git). Crie a pa
 ```powershell
 Copy-Item .env.example .env
 ```
-Abra o `.env` e troque pelo menos:
+Os valores de exemplo já funcionam para rodar localmente. Num deploy de verdade, troque:
 - `DB_PASSWORD`: a senha que o Postgres vai usar
 - `JWT_SECRET`: um segredo com **no mínimo 32 caracteres** (gere com `openssl rand -base64 48` no Git Bash)
 
@@ -66,7 +67,7 @@ O login devolve `{ "token": "...", "tipo": "Bearer", "usuarioId": 1, "nome": "Te
 - [ ] Ler [DOCKER_SETUP.md](./DOCKER_SETUP.md) para mais detalhes
 - [ ] Testar endpoints em [requests.http](./requests.http) (com VSCode REST Client)
 - [ ] Rodar os testes automatizados: `.\gradlew.bat test` (não precisa de Postgres nem Docker; veja o [README](./README.md#-testes-automatizados))
-- [ ] Subir o front (meu-norte-front): `npm ci` e `npm run dev`, depois abrir `http://localhost:3000` (veja o [README](./README.md#-integração-com-o-frontend-nextjs))
+- [ ] Subir o front ([fin-front](https://github.com/HENR1QUEF0NSECA/fin-front)): clonar ao lado do fin-back, `npm ci` e `npm run dev`, depois abrir `http://localhost:3000` (passo a passo no [README](./README.md#-como-rodar-o-projeto))
 
 ---
 

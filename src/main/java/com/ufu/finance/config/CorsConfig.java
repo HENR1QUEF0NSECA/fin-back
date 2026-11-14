@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Configuração de CORS para fronts que chamam a API direto do navegador.
  *
- * O meu-norte-front (Next.js, localhost:3000) chama a API pelo servidor do Next,
+ * O fin-front (Next.js, localhost:3000) chama a API pelo servidor do Next,
  * então não depende disto; as origens ficam liberadas para chamadas feitas pelo
  * navegador durante o desenvolvimento.
  *

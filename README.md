@@ -2,13 +2,79 @@
 
 📊 Backend de gerenciamento financeiro pessoal desenvolvido em **Spring Boot 4.0.2** com autenticação JWT.
 
-## 🎯 Início Rápido
+## 🚀 Como rodar o projeto
 
-> **Quer começar já?** Leia o [QUICK_START.md](./QUICK_START.md) (5 minutos)
+O sistema tem duas partes, cada uma num repositório:
+
+- **[fin-back](https://github.com/HENR1QUEF0NSECA/fin-back)** (este): a API em Spring Boot e o banco PostgreSQL, que sobem juntos pelo Docker
+- **[fin-front](https://github.com/HENR1QUEF0NSECA/fin-front)**: a interface em Next.js
+
+### O que precisa estar instalado
+
+- [Git](https://git-scm.com/downloads)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/), aberto e rodando
+- [Node.js](https://nodejs.org/) 20.9 ou mais novo (a versão LTS serve)
+
+Não precisa instalar Java nem PostgreSQL: os dois rodam dentro do Docker.
+
+### Passo a passo
+
+Os comandos funcionam no PowerShell, no Git Bash, no macOS e no Linux.
+
+**1. Clone os dois repositórios na mesma pasta**
+
+```bash
+git clone https://github.com/HENR1QUEF0NSECA/fin-back.git
+git clone https://github.com/HENR1QUEF0NSECA/fin-front.git
+```
+
+**2. Suba a API e o banco**
+
+```bash
+cd fin-back
+cp .env.example .env
+docker compose up -d --build
+```
+
+O `.env` guarda a senha do banco e o segredo do JWT. Os valores de exemplo já funcionam para rodar localmente; só precisam ser trocados num deploy de verdade. (No Prompt de Comando do Windows, use `copy` no lugar de `cp`.)
+
+Na primeira vez o Docker leva alguns minutos para baixar as imagens e compilar a API. Para conferir se ela subiu, abra http://localhost:8080/api/categorias no navegador: deve aparecer `{"status":401,"erro":"Token não fornecido",...}`. Esse 401 é o esperado, porque a rota exige login.
+
+**3. Suba o front**
+
+No mesmo terminal:
+
+```bash
+cd ../fin-front
+npm ci
+npm run dev
+```
+
+**4. Use o sistema**
+
+Abra http://localhost:3000, clique em **Criar conta**, cadastre-se e entre. As categorias (Transporte, Lazer, Salário...) já vêm prontas, então dá para lançar receitas e despesas, criar orçamentos e ver o painel na hora.
+
+### Para parar
+
+- Front: `Ctrl+C` no terminal do `npm run dev`
+- API e banco: `docker compose down` dentro da pasta `fin-back` (os dados ficam guardados para a próxima vez)
+
+### Se algo der errado
+
+| Problema | Solução |
+|---|---|
+| `docker` não é reconhecido, ou erro ao conectar no Docker | Abra o Docker Desktop e espere ele indicar que está rodando |
+| Erro de porta na 5432 (`port is already allocated` ou `ports are not available`) | Já existe um PostgreSQL usando essa porta no seu computador. No `fin-back/.env`, troque para `POSTGRES_PORT=5433` e rode `docker compose up -d` de novo |
+| Erro de porta na 8080 | Feche o programa que está usando a 8080 e rode `docker compose up -d` de novo |
+| No PowerShell: `npm.ps1 não pode ser carregado` | Use `npm.cmd ci` e `npm.cmd run dev`, ou rode os comandos no Git Bash ou no Prompt de Comando |
+| O front abriu em outra porta (3001...) | A 3000 estava ocupada; use o endereço que o `npm run dev` mostrar |
+| Erro ao entrar ou cadastrar | Confira se a API subiu (passo 2). Os logs dela aparecem com `docker compose logs app`, dentro de `fin-back` |
+
+Sem Docker, dá para rodar a API com Java 21 e um PostgreSQL instalado: veja [Setup e Instalação](#-setup-e-instalação). Outros problemas: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
 ## 📋 Índice
 
-- [Início Rápido](#-início-rápido)
+- [Como rodar o projeto](#-como-rodar-o-projeto)
 - [Docker Setup](#-docker-setup)
 - [Integração com o Frontend (Next.js)](#-integração-com-o-frontend-nextjs)
 - [Visão Geral](#-visão-geral)
@@ -67,7 +133,7 @@ Quer compartilhar um link com seu professor? Veja [RAILWAY_DEPLOY.md](./RAILWAY_
 
 ## 🔗 Integração com o Frontend (Next.js)
 
-O frontend do projeto é o **meu-norte-front** (Next.js), que roda em `http://localhost:3000` e consome esta API em `http://localhost:8080/api`.
+O frontend do projeto é o **[fin-front](https://github.com/HENR1QUEF0NSECA/fin-front)** (Next.js), que roda em `http://localhost:3000` e consome esta API em `http://localhost:8080/api`.
 
 O navegador não chama a API direto: as rotas do próprio Next fazem o meio de campo (padrão BFF).
 
@@ -77,11 +143,7 @@ O navegador não chama a API direto: as rotas do próprio Next fazem o meio de c
 | `POST /api/auth/register` | `POST /api/auth/registro` | Cadastra o usuário |
 | `/api/backend/<caminho>` | `/api/<caminho>` | Repassa a chamada com `Authorization: Bearer <token do cookie>` |
 
-Para rodar os dois juntos:
-
-1. Suba a API (veja o [QUICK_START.md](./QUICK_START.md)).
-2. No meu-norte-front: `npm ci` e `npm run dev`. O endereço da API vem da variável `BACKEND_URL` do front (padrão `http://localhost:8080/api`).
-3. Abra `http://localhost:3000`.
+Para rodar os dois juntos, siga o passo a passo de [Como rodar o projeto](#-como-rodar-o-projeto). O front encontra a API pela variável `BACKEND_URL` (padrão `http://localhost:8080/api`).
 
 O front lê os erros pelo formato padrão `{ status, erro, campos?, timestamp }` (veja [Formato das respostas de erro](#formato-das-respostas-de-erro)) e mostra na tela a mensagem de cada campo em `campos` ou, se não houver, a do campo `erro`.
 
@@ -1313,7 +1375,7 @@ Mês e ano são validados pelas anotações `@Mes` (1 a 12) e `@Ano` (2000 a 210
 
 ## 🔌 Exemplos de Integração Frontend
 
-> Exemplos genéricos, para um front que chame a API direto do navegador. O meu-norte-front não precisa disso: ele usa as rotas do Next descritas em [Integração com o Frontend (Next.js)](#-integração-com-o-frontend-nextjs).
+> Exemplos genéricos, para um front que chame a API direto do navegador. O fin-front não precisa disso: ele usa as rotas do Next descritas em [Integração com o Frontend (Next.js)](#-integração-com-o-frontend-nextjs).
 
 ### 1. Com Axios (JavaScript/React)
 
@@ -1625,7 +1687,7 @@ curl -X GET http://localhost:8080/api/categorias \
 
 ## 🌍 Variáveis de Ambiente do Frontend
 
-As variáveis do **backend** ficam no `.env` (veja [Setup e Instalação](#-setup-e-instalação)). As do **frontend** (meu-norte-front) ficam no `.env.local` dele e são opcionais:
+As variáveis do **backend** ficam no `.env` (veja [Setup e Instalação](#-setup-e-instalação)). As do **frontend** (fin-front) ficam no `.env.local` dele e são opcionais:
 
 | Variável | Padrão | Para quê |
 |---|---|---|
@@ -1666,7 +1728,7 @@ INSERT INTO categorias (nome) VALUES ('Investimentos');
 
 ## 🚀 Boas Práticas de Integração
 
-1. **Armazenar Token**: Prefira um cookie `httpOnly`, como o meu-norte-front faz, que o JavaScript da página não consegue ler. `localStorage` funciona, mas fica exposto a scripts injetados (XSS)
+1. **Armazenar Token**: Prefira um cookie `httpOnly`, como o fin-front faz, que o JavaScript da página não consegue ler. `localStorage` funciona, mas fica exposto a scripts injetados (XSS)
 2. **Remover Token**: Limpe o token ao fazer logout e quando a API responder 401 (token expirado)
 3. **Validar Entrada**: Sempre valide dados no frontend antes de enviar
 4. **Tratar Erros**: Implemente tratamento de erros adequado

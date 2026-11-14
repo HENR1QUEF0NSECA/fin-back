@@ -83,7 +83,7 @@ Copie o link e compartilhe:
 https://seu-projeto-XXXXX.railway.app/api
 ```
 
-Para o front usar a API publicada, defina `BACKEND_URL=https://seu-projeto-XXXXX.railway.app/api` no `.env.local` do meu-norte-front. 🌍
+Para o front usar a API publicada, defina `BACKEND_URL=https://seu-projeto-XXXXX.railway.app/api` no `.env.local` do fin-front. 🌍
 
 ---
 

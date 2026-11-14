@@ -224,7 +224,7 @@ Access to fetch at 'http://localhost:8080/api/...'
 from origin 'http://localhost:5173' has been blocked by CORS policy
 ```
 
-> O meu-norte-front (Next.js) não passa por isso: as chamadas dele saem do servidor do Next, e CORS só vale para chamadas feitas pelo navegador.
+> O fin-front (Next.js) não passa por isso: as chamadas dele saem do servidor do Next, e CORS só vale para chamadas feitas pelo navegador.
 
 **Soluções:**
 
@@ -301,7 +301,7 @@ Exemplo de erro:
 
 #### ❌ "Login não persiste"
 
-O meu-norte-front guarda o JWT num cookie `httpOnly` (`finplan_session`, ou o nome definido em `SESSION_COOKIE_NAME`), que o JavaScript da página não enxerga. Para conferir: F12 → Application → Cookies → `http://localhost:3000`.
+O fin-front guarda o JWT num cookie `httpOnly` (`finplan_session`, ou o nome definido em `SESSION_COOKIE_NAME`), que o JavaScript da página não enxerga. Para conferir: F12 → Application → Cookies → `http://localhost:3000`.
 
 Se o cookie não aparece depois do login:
 - Veja a resposta de `POST /api/auth/login` na aba Network (F12): um erro da API vem no corpo, no formato `{ status, erro, ... }`
