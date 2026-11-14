@@ -66,7 +66,7 @@ O login devolve `{ "token": "...", "tipo": "Bearer", "usuarioId": 1, "nome": "Te
 
 - [ ] Ler [DOCKER_SETUP.md](./DOCKER_SETUP.md) para mais detalhes
 - [ ] Testar endpoints em [requests.http](./requests.http) (com VSCode REST Client)
-- [ ] Rodar os testes automatizados: `.\gradlew.bat test` (não precisa de Postgres nem Docker; veja o [README](./README.md#-testes-automatizados))
+- [ ] Rodar os testes automatizados: `.\gradlew.bat test` (precisa do JDK 21, mas não de Postgres nem Docker; veja o [README](./README.md#-testes-automatizados))
 - [ ] Subir o front ([fin-front](https://github.com/HENR1QUEF0NSECA/fin-front)): clonar ao lado do fin-back, `npm ci` e `npm run dev`, depois abrir `http://localhost:3000` (passo a passo no [README](./README.md#-como-rodar-o-projeto))
 
 ---

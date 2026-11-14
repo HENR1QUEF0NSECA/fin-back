@@ -12,10 +12,10 @@ O sistema tem duas partes, cada uma num repositório:
 ### O que precisa estar instalado
 
 - [Git](https://git-scm.com/downloads)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/), aberto e rodando
-- [Node.js](https://nodejs.org/) 20.9 ou mais novo (a versão LTS serve)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/), aberto e rodando. No Windows, o instalador ativa o WSL 2 se precisar e pode pedir para reiniciar o computador.
+- [Node.js](https://nodejs.org/) 20.9 ou mais novo (a versão LTS serve). O `npm` já vem junto.
 
-Não precisa instalar Java nem PostgreSQL: os dois rodam dentro do Docker.
+Não precisa instalar Java, Gradle nem PostgreSQL: eles rodam dentro do Docker. Na primeira vez é preciso internet, porque as dependências dos dois projetos são baixadas automaticamente (passos 2 e 3).
 
 ### Passo a passo
 
@@ -38,7 +38,9 @@ docker compose up -d --build
 
 O `.env` guarda a senha do banco e o segredo do JWT. Os valores de exemplo já funcionam para rodar localmente; só precisam ser trocados num deploy de verdade. (No Prompt de Comando do Windows, use `copy` no lugar de `cp`.)
 
-Na primeira vez o Docker leva alguns minutos para baixar as imagens e compilar a API. Para conferir se ela subiu, abra http://localhost:8080/api/categorias no navegador: deve aparecer `{"status":401,"erro":"Token não fornecido",...}`. Esse 401 é o esperado, porque a rota exige login.
+Na primeira vez, o Docker baixa a imagem do PostgreSQL e a do Gradle com Java 21. Depois, baixa as dependências da API listadas no `build.gradle` (Spring Boot, driver do PostgreSQL, jjwt...) e compila tudo. Isso leva alguns minutos; nas próximas vezes é bem mais rápido.
+
+Para conferir se a API subiu, abra http://localhost:8080/api/categorias no navegador: deve aparecer `{"status":401,"erro":"Token não fornecido",...}`. Esse 401 é o esperado, porque a rota exige login.
 
 **3. Suba o front**
 
@@ -50,6 +52,8 @@ npm ci
 npm run dev
 ```
 
+O `npm ci` baixa as dependências do front (Next.js, React, React Query...) para a pasta `node_modules`, nas versões exatas do `package-lock.json`. Ele só precisa rodar na primeira vez e quando o `package-lock.json` mudar. O `npm run dev` sobe o front em http://localhost:3000.
+
 **4. Use o sistema**
 
 Abra http://localhost:3000, clique em **Criar conta**, cadastre-se e entre. As categorias (Transporte, Lazer, Salário...) já vêm prontas, então dá para lançar receitas e despesas, criar orçamentos e ver o painel na hora.
@@ -59,6 +63,22 @@ Abra http://localhost:3000, clique em **Criar conta**, cadastre-se e entre. As c
 - Front: `Ctrl+C` no terminal do `npm run dev`
 - API e banco: `docker compose down` dentro da pasta `fin-back` (os dados ficam guardados para a próxima vez)
 
+Para rodar de novo depois, basta `docker compose up -d` em `fin-back` e `npm run dev` em `fin-front`.
+
+### Depois de atualizar o código (`git pull`)
+
+```bash
+cd fin-back
+git pull
+docker compose up -d --build
+cd ../fin-front
+git pull
+npm ci
+npm run dev
+```
+
+O `--build` recompila a API com o código novo, e o `npm ci` instala as dependências que tiverem mudado.
+
 ### Se algo der errado
 
 | Problema | Solução |
@@ -67,10 +87,11 @@ Abra http://localhost:3000, clique em **Criar conta**, cadastre-se e entre. As c
 | Erro de porta na 5432 (`port is already allocated` ou `ports are not available`) | Já existe um PostgreSQL usando essa porta no seu computador. No `fin-back/.env`, troque para `POSTGRES_PORT=5433` e rode `docker compose up -d` de novo |
 | Erro de porta na 8080 | Feche o programa que está usando a 8080 e rode `docker compose up -d` de novo |
 | No PowerShell: `npm.ps1 não pode ser carregado` | Use `npm.cmd ci` e `npm.cmd run dev`, ou rode os comandos no Git Bash ou no Prompt de Comando |
+| `npm run dev` mostra `You are using Node.js ...` e para | O Node.js é antigo: instale o 20.9 ou mais novo e abra um terminal novo |
 | O front abriu em outra porta (3001...) | A 3000 estava ocupada; use o endereço que o `npm run dev` mostrar |
 | Erro ao entrar ou cadastrar | Confira se a API subiu (passo 2). Os logs dela aparecem com `docker compose logs app`, dentro de `fin-back` |
 
-Sem Docker, dá para rodar a API com Java 21 e um PostgreSQL instalado: veja [Setup e Instalação](#-setup-e-instalação). Outros problemas: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
+Sem Docker, dá para rodar a API com o JDK 21 e um PostgreSQL instalados: veja [Rodar a API sem Docker](#-rodar-a-api-sem-docker). Outros problemas: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
 ## 📋 Índice
 
@@ -78,7 +99,7 @@ Sem Docker, dá para rodar a API com Java 21 e um PostgreSQL instalado: veja [Se
 - [Docker Setup](#-docker-setup)
 - [Integração com o Frontend (Next.js)](#-integração-com-o-frontend-nextjs)
 - [Visão Geral](#-visão-geral)
-- [Setup e Instalação](#-setup-e-instalação) (configuração pelo `.env`)
+- [Rodar a API sem Docker](#-rodar-a-api-sem-docker) (configuração pelo `.env`)
 - [Testes Automatizados](#-testes-automatizados)
 - [Autenticação JWT](#-autenticação-jwt)
 - [Endpoints da API](#-endpoints-da-api)
@@ -182,23 +203,33 @@ O backend fornece uma API RESTful para gerenciar:
 
 ### Requisitos
 
-- Java 21+
-- PostgreSQL 12+
-- Gradle (ou usar `./gradlew`)
+- **Com Docker** (recomendado): Docker Desktop. Veja [Como rodar o projeto](#-como-rodar-o-projeto).
+- **Sem Docker**: JDK 21 e PostgreSQL. Veja [Rodar a API sem Docker](#-rodar-a-api-sem-docker).
+
+Nos dois casos, o Gradle não precisa ser instalado: o Docker ou o `./gradlew` baixam a versão certa.
 
 ---
 
-## 🔧 Setup e Instalação
+## 🔧 Rodar a API sem Docker
 
-### 1. Configurar Banco de Dados
+Para rodar a API direto no computador, sem Docker. O front continua igual ao passo 3 de [Como rodar o projeto](#-como-rodar-o-projeto).
+
+### O que precisa estar instalado
+
+- [JDK 21](https://adoptium.net/temurin/releases/?version=21) (o JDK, não só o JRE). O `build.gradle` exige exatamente o Java 21.
+- [PostgreSQL 16](https://www.postgresql.org/download/) (a mesma versão do Docker), rodando na porta 5432.
+
+Não precisa instalar o Gradle. Na primeira execução, o `./gradlew` (ou `.\gradlew.bat` no Windows) baixa o Gradle 9.3.0 e todas as dependências do `build.gradle`. Só essa primeira vez precisa de internet; depois fica tudo em cache na pasta `.gradle` do seu usuário.
+
+### 1. Criar o banco
+
+No `psql`, no pgAdmin ou no DBeaver, conectado como o usuário `postgres`:
 
 ```sql
--- Criar banco de dados
 CREATE DATABASE finance;
-
--- Conectar ao banco
-\c finance
 ```
+
+Não precisa criar tabelas: a API cria todas na primeira execução (`ddl-auto: update`), e as categorias entram pelo `data.sql`.
 
 ### 2. Configurar as variáveis de ambiente (`.env`)
 
@@ -215,7 +246,9 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-Depois preencha os valores:
+Sem Docker, o `DB_PASSWORD` precisa ser a senha do usuário `postgres` do **seu** PostgreSQL. O `DB_URL` do modelo (`jdbc:postgresql://localhost:5432/finance`) já aponta para ele. O `JWT_SECRET` do modelo funciona para rodar localmente.
+
+Todas as variáveis:
 
 | Variável | Obrigatória | Padrão | Descrição |
 |----------|:-----------:|--------|-----------|
@@ -248,19 +281,17 @@ $b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create
 Rode os comandos a partir da raiz do projeto (é lá que a API procura o `.env`):
 
 ```bash
-# Build do projeto (também roda os testes automatizados)
-./gradlew build
-
-# Executar
+# Executar a API (na primeira vez, baixa o Gradle e as dependências)
 ./gradlew bootRun
 
-# Ou executar o JAR gerado
+# Ou: gerar o JAR (também roda os testes automatizados) e executá-lo
+./gradlew build
 java -jar build/libs/finance-app-0.0.1-SNAPSHOT.jar
 ```
 
 No Windows, use `.\gradlew.bat` no lugar de `./gradlew`.
 
-A API estará disponível em `http://localhost:8080`
+A API estará disponível em `http://localhost:8080`. Para conferir, abra http://localhost:8080/api/categorias: deve aparecer o 401 em JSON (`Token não fornecido`).
 
 ### 4. Perfil `dev` (log de SQL)
 
@@ -1687,7 +1718,7 @@ curl -X GET http://localhost:8080/api/categorias \
 
 ## 🌍 Variáveis de Ambiente do Frontend
 
-As variáveis do **backend** ficam no `.env` (veja [Setup e Instalação](#-setup-e-instalação)). As do **frontend** (fin-front) ficam no `.env.local` dele e são opcionais:
+As variáveis do **backend** ficam no `.env` (veja [Rodar a API sem Docker](#-rodar-a-api-sem-docker)). As do **frontend** (fin-front) ficam no `.env.local` dele e são opcionais:
 
 | Variável | Padrão | Para quê |
 |---|---|---|
