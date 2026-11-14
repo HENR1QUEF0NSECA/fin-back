@@ -1,6 +1,3 @@
-# Script para facilitar execução do Docker Compose
-# Use: .\docker-start.ps1
-
 param(
     [string]$action = "up",
     [switch]$detach = $false
@@ -33,7 +30,6 @@ if ($action -eq "help" -or $action -eq "?") {
 
 switch ($action.ToLower()) {
     "up" {
-        # O docker-compose.yml le DB_PASSWORD e JWT_SECRET do arquivo .env
         if (-not (Test-Path ".env")) {
             if (-not (Test-Path ".env.example")) {
                 Write-Host "[!] Arquivo .env nao encontrado (nem o .env.example para copiar)" -ForegroundColor Red

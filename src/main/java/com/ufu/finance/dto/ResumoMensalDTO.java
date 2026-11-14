@@ -3,20 +3,15 @@ package com.ufu.finance.dto;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * Resumo financeiro de um mês: totais de receita, despesa e saldo.
- * Inclui breakdown por categoria para montar gráficos.
- */
 public record ResumoMensalDTO(
         int mes,
         int ano,
         BigDecimal totalReceitas,
         BigDecimal totalDespesas,
-        BigDecimal saldo, // receitas - despesas
+        BigDecimal saldo,
         List<GraficoCategoriaDTO> despesasPorCategoria,
         List<GraficoCategoriaDTO> receitasPorCategoria) {
 
-    /** Calcula o saldo a partir dos totais. */
     public ResumoMensalDTO(int mes, int ano,
                            BigDecimal totalReceitas,
                            BigDecimal totalDespesas,

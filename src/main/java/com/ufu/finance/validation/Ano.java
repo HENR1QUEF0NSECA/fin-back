@@ -12,12 +12,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Ano válido: de 2000 a 2100. É a mesma regra para transações e orçamentos.
- *
- * Vale para campos de DTO (body) e para parâmetros de query, como ?ano=1999.
- * Nulo passa; quando o campo for obrigatório, combine com @NotNull.
- */
 @Min(2000)
 @Max(2100)
 @ReportAsSingleViolation

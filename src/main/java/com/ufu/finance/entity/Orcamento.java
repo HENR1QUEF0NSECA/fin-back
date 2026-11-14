@@ -8,10 +8,6 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Limite mensal de gasto por categoria (RF06).
- * Único por combinação (usuario, categoria, mês, ano) — ver UniqueConstraint.
- */
 @Data
 @NoArgsConstructor
 @Entity
@@ -28,12 +24,10 @@ public class Orcamento {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Usuário dono do orçamento. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario usuario;
 
-    /** Categoria à qual o limite se aplica. EAGER porque o nome aparece na resposta. */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_categoria", nullable = false)
     private Categoria categoria;

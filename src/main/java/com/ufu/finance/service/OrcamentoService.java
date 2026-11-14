@@ -23,16 +23,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Regras de negócio dos orçamentos mensais por categoria (RF06).
- *
- * Decisões de negócio (validadas com o time em 2026-06-12):
- *  - Unicidade: 1 orçamento por (usuário, categoria, mês, ano) → 409 ao duplicar
- *  - Threshold de alerta: gasto/limite >= 80%
- *  - PUT atualiza todos os campos (categoriaId, mês, ano, limite)
- *  - DELETE livre — transações antigas permanecem, só o limite some
- *  - `consumido` = SUM(transações tipo=D na categoria/mês/ano)
- */
 @Service
 @RequiredArgsConstructor
 public class OrcamentoService {
@@ -46,8 +36,6 @@ public class OrcamentoService {
     private final CategoriaRepository categoriaRepository;
 
     private final TransacaoRepository transacaoRepository;
-
-    // ─── CRUD ────────────────────────────────────────────────────────────────
 
     public OrcamentoResponseDTO criar(OrcamentoRequestDTO dto, Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
@@ -73,7 +61,6 @@ public class OrcamentoService {
             Orcamento saved = orcamentoRepository.save(orcamento);
             return montarResponse(saved);
         } catch (DataIntegrityViolationException e) {
-            // Defesa em profundidade caso a verificação acima escape em concorrência.
             throw new ConflitoException(
                     "Já existe orçamento para esta categoria no mês/ano informado");
         }
@@ -87,7 +74,6 @@ public class OrcamentoService {
     public OrcamentoResponseDTO atualizar(Long id, OrcamentoRequestDTO dto, Long usuarioId) {
         Orcamento orcamento = buscarEAutorizar(id, usuarioId);
 
-        // Verifica se a nova combinação (categoria, mês, ano) não colide com outro orçamento.
         boolean mudouChave =
                 !orcamento.getCategoria().getId().equals(dto.getCategoriaId())
                         || !orcamento.getMes().equals(dto.getMes())
@@ -121,8 +107,6 @@ public class OrcamentoService {
         orcamentoRepository.delete(orcamento);
     }
 
-    // ─── Consultas ────────────────────────────────────────────────────────────
-
     public List<OrcamentoResponseDTO> listarOrcamentosDoUsuario(Long usuarioId) {
         return orcamentoRepository.findByUsuarioIdOrderByAnoDescMesDesc(usuarioId).stream()
                 .map(this::montarResponse)
@@ -144,14 +128,6 @@ public class OrcamentoService {
         return montarResponse(orcamento);
     }
 
-    // ─── Helper público pra TransacaoService (RF10) ───────────────────────────
-
-    /**
-     * Decide se o POST /api/transacoes deve devolver {@code alertaOrcamento: true}.
-     * True quando existe orçamento pra (categoria, mês, ano) E o gasto acumulado
-     * (já incluindo a transação recém-salva) >= 80% do limite.
-     * Quando não há orçamento, retorna false (decisão de negócio #5).
-     */
     public boolean shouldAlert(Long usuarioId, Integer categoriaId, int mes, int ano) {
         return orcamentoRepository
                 .findByUsuarioIdAndCategoriaIdAndMesAndAno(usuarioId, categoriaId, mes, ano)
@@ -164,8 +140,6 @@ public class OrcamentoService {
                 })
                 .orElse(false);
     }
-
-    // ─── Internos ─────────────────────────────────────────────────────────────
 
     private Orcamento buscarEAutorizar(Long id, Long usuarioId) {
         Orcamento orcamento = orcamentoRepository.findById(id)

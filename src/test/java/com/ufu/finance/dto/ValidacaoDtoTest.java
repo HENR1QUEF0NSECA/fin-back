@@ -15,9 +15,6 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Regras de validação dos DTOs de entrada, incluindo as anotações @Mes e @Ano.
- */
 class ValidacaoDtoTest {
 
     private static ValidatorFactory fabrica;
@@ -78,9 +75,6 @@ class ValidacaoDtoTest {
         assertThat(erros(dto)).containsOnlyKeys("valor");
     }
 
-    // ─── Auxiliares ───────────────────────────────────────────────────────────
-
-    /** Erros de validação no formato campo → mensagem. */
     private static Map<String, String> erros(Object dto) {
         return validator.validate(dto).stream().collect(Collectors.toMap(
                 (ConstraintViolation<Object> v) -> v.getPropertyPath().toString(),

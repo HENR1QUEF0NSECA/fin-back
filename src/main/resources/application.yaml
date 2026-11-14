@@ -1,8 +1,3 @@
-# Configuração base (vale para todos os ambientes).
-#
-# Nada sensível fica neste arquivo: senha do banco e segredo do JWT vêm de
-# variáveis de ambiente. Localmente, elas são lidas do arquivo .env na raiz do
-# projeto (copie o .env.example). No Docker, vêm do docker-compose.yml.
 spring:
   config:
     import: optional:file:.env[.properties]
@@ -17,8 +12,6 @@ spring:
       ddl-auto: update
     show-sql: false
     defer-datasource-initialization: true
-    # Sem sessão aberta durante a renderização da resposta: cada consulta acontece
-    # dentro do service, e o JSON é montado só a partir dos DTOs.
     open-in-view: false
 
   sql:
@@ -26,9 +19,6 @@ spring:
       mode: always
       encoding: UTF-8
 
-  # Declara o charset nas respostas (application/json;charset=UTF-8). Sem isso,
-  # clientes que não assumem UTF-8 sozinhos, como o Invoke-RestMethod do
-  # PowerShell 5.1, mostram os acentos errados ("SalÃ¡rio").
   servlet:
     encoding:
       charset: UTF-8

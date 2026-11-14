@@ -33,19 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Ponto único de tratamento de erros da API.
- *
- * Toda resposta de erro sai daqui com o mesmo formato:
- * <pre>
- * { "status": 400, "erro": "mensagem", "campos": { "valor": "..." }, "timestamp": "..." }
- * </pre>
- * "campos" só aparece em erro de validação, com uma mensagem por campo.
- * O 401 do JwtAuthenticationFilter também passa por aqui.
- *
- * As mensagens são sempre em português e nunca expõem detalhes internos
- * (SQL, nomes de classes Java); esses detalhes vão só para o log.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -53,17 +40,11 @@ public class GlobalExceptionHandler {
 
     private static final MediaType JSON_UTF8 = new MediaType(MediaType.APPLICATION_JSON, StandardCharsets.UTF_8);
 
-    // ─── Regras de negócio (lançadas pelos services) ──────────────────────────
-
-    /** Exceções da própria API: o status vem do tipo (404, 409, 403...). */
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, Object>> handleApiException(ApiException ex) {
         return resposta(ex.getStatus(), ex.getMessage(), null);
     }
 
-    // ─── Validação dos dados de entrada ───────────────────────────────────────
-
-    /** Body com @Valid inválido: devolve uma mensagem por campo. */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleBodyInvalido(MethodArgumentNotValidException ex) {
         Map<String, String> campos = new LinkedHashMap<>();
@@ -72,7 +53,6 @@ public class GlobalExceptionHandler {
         return resposta(HttpStatus.BAD_REQUEST, "Dados inválidos", campos);
     }
 
-    /** Parâmetro de query/URL que falhou numa validação, ex.: ?mes=13 com @Mes. */
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<Map<String, Object>> handleParametroInvalido(HandlerMethodValidationException ex) {
         Map<String, String> campos = new LinkedHashMap<>();
@@ -84,7 +64,6 @@ public class GlobalExceptionHandler {
         return resposta(HttpStatus.BAD_REQUEST, "Dados inválidos", campos);
     }
 
-    /** Body ilegível: JSON mal formado, ausente, ou campo com tipo errado ("tipo": "X"). */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleBodyIlegivel(HttpMessageNotReadableException ex) {
         if (ex.getCause() instanceof MismatchedInputException erro) {
@@ -98,22 +77,18 @@ public class GlobalExceptionHandler {
                 "Corpo da requisição ausente ou mal formatado: envie um JSON válido", null);
     }
 
-    /** Parâmetro obrigatório ausente, ex.: GET /api/transacoes/mes sem ?mes= */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<Map<String, Object>> handleParametroAusente(MissingServletRequestParameterException ex) {
         return resposta(HttpStatus.BAD_REQUEST,
                 "Parâmetro obrigatório ausente: " + ex.getParameterName(), null);
     }
 
-    /** Valor com tipo errado na URL, ex.: /api/orcamentos/abc ou /api/transacoes/tipo/X */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, Object>> handleTipoInvalido(MethodArgumentTypeMismatchException ex) {
         return resposta(HttpStatus.BAD_REQUEST,
                 "Valor inválido para '" + ex.getName() + "': " + ex.getValue() + dica(ex.getRequiredType()),
                 null);
     }
-
-    // ─── Erros de rota / protocolo HTTP ───────────────────────────────────────
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<Map<String, Object>> handleRotaInexistente(NoResourceFoundException ex) {
@@ -123,7 +98,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<Map<String, Object>> handleMetodoNaoSuportado(HttpRequestMethodNotSupportedException ex) {
-        // Os headers trazem o "Allow" com os métodos aceitos pela rota.
         return resposta(ex.getStatusCode(),
                 "Método " + ex.getMethod() + " não é suportado nesta rota", null, ex.getHeaders());
     }
@@ -134,20 +108,12 @@ public class GlobalExceptionHandler {
                 "Content-Type não suportado: envie o corpo como application/json", null, ex.getHeaders());
     }
 
-    // ─── Banco de dados e erros inesperados ───────────────────────────────────
-
-    /** Restrição do banco (ex.: unique) que escapou das checagens dos services. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleIntegridade(DataIntegrityViolationException ex) {
         log.warn("Violação de integridade no banco: {}", ex.getMostSpecificCause().getMessage());
         return resposta(HttpStatus.CONFLICT, "A operação conflita com dados já existentes", null);
     }
 
-    /**
-     * Rede de segurança para o que não caiu nos handlers acima.
-     * Exceções do próprio Spring (todas implementam ErrorResponse) mantêm o status delas.
-     * Qualquer outra coisa é bug ou falha de infraestrutura: 500, com o detalhe só no log.
-     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleInesperado(Exception ex) {
         if (ex instanceof ErrorResponse erroSpring) {
@@ -158,8 +124,6 @@ public class GlobalExceptionHandler {
         return resposta(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Erro interno do servidor. Tente novamente mais tarde.", null);
     }
-
-    // ─── Montagem da resposta ─────────────────────────────────────────────────
 
     private ResponseEntity<Map<String, Object>> resposta(HttpStatusCode status, String erro,
                                                          Map<String, String> campos) {
@@ -175,8 +139,6 @@ public class GlobalExceptionHandler {
             corpo.put("campos", campos);
         }
         corpo.put("timestamp", LocalDateTime.now());
-        // Content-Type explícito: o Spring limpa o da resposta antes de chamar o
-        // handler de erro, e sem isso o charset=UTF-8 das respostas de sucesso se perderia.
         return ResponseEntity.status(status).headers(headers).contentType(JSON_UTF8).body(corpo);
     }
 
@@ -191,7 +153,6 @@ public class GlobalExceptionHandler {
         };
     }
 
-    /** Nome do campo do JSON onde o Jackson falhou, ex.: "tipo". */
     private static String ultimoCampo(JacksonException erro) {
         List<JacksonException.Reference> caminho = erro.getPath();
         for (int i = caminho.size() - 1; i >= 0; i--) {
@@ -203,7 +164,6 @@ public class GlobalExceptionHandler {
         return null;
     }
 
-    /** Complemento da mensagem com o formato esperado para o tipo do campo. */
     private static String dica(Class<?> tipo) {
         if (tipo == null) {
             return "";

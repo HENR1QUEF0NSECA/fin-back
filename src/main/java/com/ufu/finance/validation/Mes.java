@@ -12,12 +12,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Mês válido: de 1 a 12.
- *
- * Vale para campos de DTO (body) e para parâmetros de query, como ?mes=13.
- * Nulo passa; quando o campo for obrigatório, combine com @NotNull.
- */
 @Min(1)
 @Max(12)
 @ReportAsSingleViolation

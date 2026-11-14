@@ -2,16 +2,6 @@ package com.ufu.finance.entity;
 
 import jakarta.persistence.*;
 
-/**
- * Representa uma categoria de transação.
- *
- * A tabela é populada via data.sql com as categorias iniciais.
- * Para adicionar novas categorias basta inserir um novo registro no banco
- * — nenhuma alteração de código é necessária.
- *
- * Exemplo de INSERT:
- *   INSERT INTO categorias (nome) VALUES ('investment');
- */
 @Entity
 @Table(name = "categorias")
 public class Categoria {

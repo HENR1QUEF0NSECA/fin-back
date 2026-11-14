@@ -25,10 +25,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Testes de ponta a ponta da API: sobem a aplicação inteira (filtro JWT,
- * controllers, services, tratamento de erros) com um banco H2 em memória.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -36,7 +32,6 @@ class ApiIntegracaoTest {
 
     private static final String SENHA = "senha123";
 
-    /** Toda resposta JSON declara o charset, para clientes que não assumem UTF-8. */
     private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 
     @Autowired
@@ -58,8 +53,6 @@ class ApiIntegracaoTest {
                 })
                 .getId();
     }
-
-    // ─── Autenticação ─────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("cadastro, login e /usuarios/me devolvem os dados do usuário, sem a senha")
@@ -127,8 +120,6 @@ class ApiIntegracaoTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ─── Transações e orçamentos ──────────────────────────────────────────────
-
     @Test
     @DisplayName("transação criada e listada usa id, usuarioId e categoriaId")
     void criaEListaTransacao() throws Exception {
@@ -186,8 +177,6 @@ class ApiIntegracaoTest {
                 .andExpect(jsonPath("$.erro").value(startsWith("Acesso negado")));
     }
 
-    // ─── Validação e erros ────────────────────────────────────────────────────
-
     @Test
     @DisplayName("body inválido devolve 400 com a mensagem de cada campo")
     void bodyInvalido() throws Exception {
@@ -242,13 +231,10 @@ class ApiIntegracaoTest {
                 .andExpect(jsonPath("$.campos.senha").value("Senha deve ter entre 6 e 72 caracteres"));
     }
 
-    // ─── Auxiliares ───────────────────────────────────────────────────────────
-
     private static String emailNovo() {
         return "teste-" + UUID.randomUUID().toString().substring(0, 8) + "@ex.com";
     }
 
-    /** Permite escrever o JSON com aspas simples, mais legível dentro do Java. */
     private static String json(String modelo, Object... valores) {
         return String.format(modelo, valores).replace('\'', '"');
     }

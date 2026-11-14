@@ -8,17 +8,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * Categorias de transação, compartilhadas entre todos os usuários.
- * São criadas pelo data.sql na inicialização.
- */
 @Service
 @RequiredArgsConstructor
 public class CategoriaService {
 
     private final CategoriaRepository categoriaRepository;
 
-    /** Todas as categorias, em ordem alfabética. */
     public List<CategoriaResponseDTO> listar() {
         return categoriaRepository.findAll(Sort.by("nome")).stream()
                 .map(CategoriaResponseDTO::new)

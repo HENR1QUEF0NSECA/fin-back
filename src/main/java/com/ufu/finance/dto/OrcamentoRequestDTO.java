@@ -10,9 +10,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
-/**
- * DTO para requisição de criação/atualização de orçamento
- */
 @Data
 @NoArgsConstructor
 public class OrcamentoRequestDTO {

@@ -34,9 +34,6 @@ public class TransacaoService {
 
     private final OrcamentoService orcamentoService;
 
-    // ─── CRUD ────────────────────────────────────────────────────────────────
-
-    /** Cria uma nova transação vinculada ao usuário autenticado */
     public TransacaoResponseDTO criar(TransacaoRequestDTO dto, Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new NaoAutenticadoException("Usuário não encontrado"));
@@ -55,8 +52,6 @@ public class TransacaoService {
         Transacao saved = transacaoRepository.save(transacao);
         TransacaoResponseDTO response = new TransacaoResponseDTO(saved);
 
-        // RF10: setar alertaOrcamento apenas pra despesas. Para receitas, sempre false
-        // (decisão de negócio #5: campo sempre presente na resposta de POST).
         if (saved.getTipo() == TipoTransacao.D) {
             LocalDateTime dh = saved.getDataHoraTransacao();
             boolean alerta = orcamentoService.shouldAlert(
@@ -69,7 +64,6 @@ public class TransacaoService {
         return response;
     }
 
-    /** Remove uma transação — só o dono pode deletar */
     public void deletar(Long idTransacao, Long usuarioId) {
         Transacao transacao = transacaoRepository.findById(idTransacao)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Transação não encontrada"));
@@ -82,9 +76,6 @@ public class TransacaoService {
         transacaoRepository.delete(transacao);
     }
 
-    // ─── Consultas ────────────────────────────────────────────────────────────
-
-    /** Todas as transações do usuário logado */
     public List<TransacaoResponseDTO> listarPorUsuario(Long usuarioId) {
         return transacaoRepository
                 .findByUsuarioIdOrderByDataHoraTransacaoDesc(usuarioId)
@@ -93,7 +84,6 @@ public class TransacaoService {
                 .collect(Collectors.toList());
     }
 
-    /** Transações filtradas por tipo (R ou D) */
     public List<TransacaoResponseDTO> listarPorTipo(Long usuarioId, TipoTransacao tipo) {
         return transacaoRepository
                 .findByUsuarioIdAndTipoOrderByDataHoraTransacaoDesc(usuarioId, tipo)
@@ -102,7 +92,6 @@ public class TransacaoService {
                 .collect(Collectors.toList());
     }
 
-    /** Transações dentro de um mês/ano */
     public List<TransacaoResponseDTO> listarPorMesAno(Long usuarioId, int mes, int ano) {
         return transacaoRepository
                 .findByUsuarioIdAndMesAno(usuarioId, mes, ano)
@@ -111,12 +100,10 @@ public class TransacaoService {
                 .collect(Collectors.toList());
     }
 
-    /** Transações filtradas por intervalo de datas */
     public List<TransacaoResponseDTO> listarPorPeriodo(Long usuarioId, LocalDate inicio, LocalDate fim) {
         if (inicio.isAfter(fim)) {
             throw new RequisicaoInvalidaException("Data de início não pode ser posterior à data de fim");
         }
-        // dh_transacao é data+hora: vai do início do primeiro dia até o fim do último
         return transacaoRepository
                 .findByUsuarioIdAndDataHoraTransacaoBetweenOrderByDataHoraTransacaoDesc(
                         usuarioId, inicio.atStartOfDay(), fim.atTime(LocalTime.MAX))
@@ -125,7 +112,6 @@ public class TransacaoService {
                 .collect(Collectors.toList());
     }
 
-    /** Transações por categoria */
     public List<TransacaoResponseDTO> listarPorCategoria(Long usuarioId, Integer categoriaId) {
         categoriaRepository.findById(categoriaId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Categoria não encontrada"));
@@ -137,12 +123,6 @@ public class TransacaoService {
                 .collect(Collectors.toList());
     }
 
-    // ─── Dashboard ────────────────────────────────────────────────────────────
-
-    /**
-     * Resumo completo do mês: totais de receita/despesa/saldo
-     * + breakdown por categoria (para gráfico de pizza)
-     */
     public ResumoMensalDTO resumoMensal(Long usuarioId, int mes, int ano) {
         BigDecimal totalReceitas = transacaoRepository
                 .sumByTipoAndMesAno(usuarioId, TipoTransacao.R, mes, ano);
@@ -166,10 +146,6 @@ public class TransacaoService {
                 despesasPorCategoria, receitasPorCategoria);
     }
 
-    /**
-     * Evolução mês a mês de receitas e despesas no ano
-     * (para gráfico de linha/barras)
-     */
     public EvolucaoMensalDTO evolucaoAnual(Long usuarioId, int ano) {
         List<EvolucaoMensalDTO.PontoMensalDTO> receitas = transacaoRepository
                 .sumPorMesNoAno(usuarioId, TipoTransacao.R, ano)

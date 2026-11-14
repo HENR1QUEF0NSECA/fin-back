@@ -22,7 +22,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-    // Força baixa só para o teste ficar rápido.
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(4);
 
     @Mock

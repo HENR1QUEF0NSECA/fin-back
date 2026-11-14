@@ -12,19 +12,13 @@ import java.util.List;
 
 public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
 
-    // ─── Listagens ────────────────────────────────────────────────────────────
-
-    /** Todas as transações de um usuário, mais recentes primeiro */
     List<Transacao> findByUsuarioIdOrderByDataHoraTransacaoDesc(Long usuarioId);
 
-    /** Transações de um usuário filtradas por tipo (R ou D) */
     List<Transacao> findByUsuarioIdAndTipoOrderByDataHoraTransacaoDesc(Long usuarioId, TipoTransacao tipo);
 
-    /** Transações de um usuário em um intervalo de data/hora (inclusivo nas duas pontas) */
     List<Transacao> findByUsuarioIdAndDataHoraTransacaoBetweenOrderByDataHoraTransacaoDesc(
             Long usuarioId, LocalDateTime inicio, LocalDateTime fim);
 
-    /** Transações de um usuário dentro de um mês/ano específico */
     @Query("""
             SELECT t FROM Transacao t
             WHERE t.usuario.id = :usuarioId
@@ -37,13 +31,9 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
             @Param("mes") int mes,
             @Param("ano") int ano);
 
-    /** Transações de um usuário por categoria */
     List<Transacao> findByUsuarioIdAndCategoriaIdOrderByDataHoraTransacaoDesc(
             Long usuarioId, Integer categoriaId);
 
-    // ─── Aggregations para Dashboard ─────────────────────────────────────────
-
-    /** Soma total de um tipo (Receita ou Despesa) no mês */
     @Query("""
             SELECT COALESCE(SUM(t.valor), 0) FROM Transacao t
             WHERE t.usuario.id = :usuarioId
@@ -57,11 +47,6 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
             @Param("mes") int mes,
             @Param("ano") int ano);
 
-    /**
-     * Soma das transações de uma categoria específica num mês/ano por tipo.
-     * Usado pelo OrcamentoService (cálculo de `consumido`) e pelo TransacaoService
-     * (cálculo de `alertaOrcamento` ao criar transação).
-     */
     @Query("""
             SELECT COALESCE(SUM(t.valor), 0) FROM Transacao t
             WHERE t.usuario.id = :usuarioId
@@ -77,10 +62,6 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
             @Param("mes") int mes,
             @Param("ano") int ano);
 
-    /**
-     * Totais agrupados por categoria para o mês — útil para gráfico de pizza.
-     * Retorna Object[]: [nomeCategoria (String), total (BigDecimal)]
-     */
     @Query("""
             SELECT c.nome, COALESCE(SUM(t.valor), 0)
             FROM Transacao t
@@ -98,10 +79,6 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
             @Param("mes") int mes,
             @Param("ano") int ano);
 
-    /**
-     * Totais agrupados por mês no ano — útil para gráfico de barras/linha.
-     * Retorna Object[]: [mes (Integer), total (BigDecimal)]
-     */
     @Query("""
             SELECT MONTH(t.dataHoraTransacao), COALESCE(SUM(t.valor), 0)
             FROM Transacao t

@@ -15,15 +15,10 @@ public class AuthService {
     private final UsuarioService usuarioService;
     private final JwtService jwtService;
 
-    /**
-     * Realiza o login do usuário e retorna o token JWT.
-     * A mensagem de erro é genérica para não revelar se o email existe ou não.
-     */
     public AuthResponseDTO login(LoginDTO loginDTO) {
         Usuario usuario = usuarioService.buscarPorEmail(loginDTO.getEmail())
                 .orElseThrow(() -> new NaoAutenticadoException("Email ou senha inválidos"));
 
-        // BCrypt compara a senha digitada com o hash armazenado
         boolean senhaCorreta = usuarioService.getPasswordEncoder()
                 .matches(loginDTO.getSenha(), usuario.getSenha());
 

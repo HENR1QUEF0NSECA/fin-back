@@ -10,10 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Lista as categorias disponíveis (compartilhadas entre todos os usuários).
- * Populadas via src/main/resources/data.sql na inicialização.
- */
 @RestController
 @RequestMapping("/api/categorias")
 @RequiredArgsConstructor
@@ -21,9 +17,6 @@ public class CategoriaController {
 
     private final CategoriaService categoriaService;
 
-    /**
-     * GET /api/categorias
-     */
     @GetMapping
     public ResponseEntity<List<CategoriaResponseDTO>> listar() {
         return ResponseEntity.ok(categoriaService.listar());

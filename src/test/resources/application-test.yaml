@@ -1,6 +1,3 @@
-# Perfil dos testes: banco H2 em memória (não precisa de Postgres nem Docker).
-# O schema é criado e apagado a cada execução, e o data.sql (específico do
-# Postgres) não roda: cada teste cria os dados de que precisa.
 spring:
   datasource:
     url: jdbc:h2:mem:finance;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE

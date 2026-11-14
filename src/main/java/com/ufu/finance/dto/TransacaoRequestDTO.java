@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 public class TransacaoRequestDTO {
 
     @NotNull(message = "Tipo é obrigatório")
-    private TipoTransacao tipo; // "R" ou "D"
+    private TipoTransacao tipo;
 
     @NotNull(message = "Valor é obrigatório")
     @DecimalMin(value = "0.01", message = "Valor deve ser maior que zero")

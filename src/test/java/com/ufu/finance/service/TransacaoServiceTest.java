@@ -102,8 +102,6 @@ class TransacaoServiceTest {
         verify(transacaoRepository, never()).delete(any());
     }
 
-    // ─── Auxiliares ───────────────────────────────────────────────────────────
-
     private void prepararCriacao() {
         Categoria categoria = new Categoria();
         categoria.setId(3);

@@ -94,8 +94,6 @@ class OrcamentoServiceTest {
         assertThat(orcamentoService.shouldAlert(1L, 3, 5, 2026)).isFalse();
     }
 
-    // ─── Auxiliares ───────────────────────────────────────────────────────────
-
     private void gastoNoMes(String valor) {
         when(transacaoRepository.sumByCategoriaTipoMesAno(1L, 3, TipoTransacao.D, 5, 2026))
                 .thenReturn(new BigDecimal(valor));

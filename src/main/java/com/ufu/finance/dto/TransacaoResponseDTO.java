@@ -1,6 +1,5 @@
 package com.ufu.finance.dto;
 
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.ufu.finance.entity.Transacao;
 import lombok.Data;
@@ -9,10 +8,6 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Transação como sai na API. Segue o mesmo padrão de nomes do orçamento:
- * "id" para o próprio registro e "usuarioId"/"categoriaId" para as referências.
- */
 @Data
 @NoArgsConstructor
 public class TransacaoResponseDTO {
@@ -24,14 +19,9 @@ public class TransacaoResponseDTO {
     private BigDecimal valor;
     private LocalDateTime dataHoraTransacao;
     private String descricao;
-    private String tipo;         // "R" ou "D"
-    private String tipoDescricao; // "Receita" ou "Despesa"
+    private String tipo;
+    private String tipoDescricao;
 
-    /**
-     * Alerta de orçamento (RF10). Populado APENAS em POST /api/transacoes —
-     * nas listagens o campo é null e omitido do JSON via @JsonInclude.
-     * true → essa transação fez o gasto na categoria/mês atingir >= 80% do limite.
-     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Boolean alertaOrcamento;
 

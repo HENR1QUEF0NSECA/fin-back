@@ -14,24 +14,13 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 import java.io.IOException;
 import java.util.Set;
 
-/**
- * Exige um token JWT válido em todas as rotas /api/*, exceto login e cadastro. O id e o nome do usuário vão para os atributos
- * "usuarioId" e "nome" da requisição, que os controllers leem com
- * {@code @RequestAttribute}.
- */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    /** Rotas que dispensam token. Comparadas com o caminho já normalizado pelo servidor. */
     private static final Set<String> ROTAS_PUBLICAS = Set.of("/api/auth/login", "/api/auth/registro");
 
     private final JwtService jwtService;
 
-    /**
-     * O filtro roda antes dos controllers, fora do alcance do @RestControllerAdvice.
-     * Este resolver entrega a exceção ao GlobalExceptionHandler, para o 401 sair
-     * no mesmo formato JSON (e em UTF-8) de todas as outras respostas de erro.
-     */
     private final HandlerExceptionResolver exceptionResolver;
 
     public JwtAuthenticationFilter(JwtService jwtService,
@@ -69,10 +58,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Caminho da requisição já decodificado e sem "..", ao contrário do
-     * getRequestURI(). Assim "/api/auth/../transacoes" não passa como rota pública.
-     */
     private static String caminhoNormalizado(HttpServletRequest request) {
         String pathInfo = request.getPathInfo();
         return request.getServletPath() + (pathInfo != null ? pathInfo : "");
