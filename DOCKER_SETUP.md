@@ -67,7 +67,7 @@ http://localhost:8080/api
 
 O frontend do projeto é o **[fin-front](https://github.com/HENR1QUEF0NSECA/fin-front)** (Next.js, em `http://localhost:3000`). Ele não chama a API direto do navegador: as rotas do próprio Next repassam as chamadas pelo servidor, com o JWT guardado num cookie `httpOnly`. O endereço da API vem da variável `BACKEND_URL` do front (padrão `http://localhost:8080/api`), então com o Docker rodando basta fazer `npm ci` e `npm run dev` no front.
 
-Detalhes no [README](./README.md#-integração-com-o-frontend-nextjs).
+Detalhes no [README do fin-front](https://github.com/HENR1QUEF0NSECA/fin-front#readme).
 
 ### CORS Configurado para:
 - `http://localhost:3000` (Next.js)
@@ -215,7 +215,7 @@ Content-Type: application/json
 }
 ```
 
-Também: `GET /api/orcamentos`, `GET|PUT|DELETE /api/orcamentos/{id}`, `GET /api/orcamentos/mes?mes=2&ano=2025` e `GET /api/orcamentos/categoria/{categoriaId}/mes?mes=2&ano=2025`. Detalhes no [README](./README.md#-orçamentos-orcamentocontroller).
+Também: `GET /api/orcamentos`, `GET|PUT|DELETE /api/orcamentos/{id}`, `GET /api/orcamentos/mes?mes=2&ano=2025` e `GET /api/orcamentos/categoria/{categoriaId}/mes?mes=2&ano=2025`. Lista de todas as rotas no [README](./README.md#-endpoints-da-api).
 
 ### 📈 Dashboard
 

@@ -285,7 +285,7 @@ Exemplo de erro:
 **Soluções:**
 - Verifique os campos obrigatórios
 - Valide os tipos de dados
-- Consulte a documentação de DTOs em [README.md](./README.md#-data-transfer-objects-dtos)
+- Consulte as rotas e o formato de erro no [README](./README.md#-endpoints-da-api)
 
 ---
 

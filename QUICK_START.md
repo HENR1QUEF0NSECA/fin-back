@@ -58,7 +58,7 @@ Invoke-RestMethod -Uri "$api/categorias" -Headers @{ Authorization = "Bearer $to
 
 O login devolve `{ "token": "...", "tipo": "Bearer", "usuarioId": 1, "nome": "Teste" }`. Use o token no header `Authorization: Bearer <token>` nas outras rotas, por exemplo `GET /api/usuarios/me`, `GET /api/categorias` e `GET /api/transacoes`.
 
-> No Windows PowerShell 5.1, `curl` é apelido do `Invoke-WebRequest` e não aceita `-X`/`-H`/`-d`. Por isso os exemplos usam `Invoke-RestMethod`. No Git Bash, os exemplos com `curl` do [README](./README.md#3-com-curl-testes) funcionam como estão.
+> No Windows PowerShell 5.1, `curl` é apelido do `Invoke-WebRequest` e não aceita `-X`/`-H`/`-d`. Por isso os exemplos usam `Invoke-RestMethod`. Exemplos de todas as rotas estão no [requests.http](./requests.http).
 
 ---
 
