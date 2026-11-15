@@ -62,8 +62,6 @@ Pronto: a API responde em `http://localhost:8080/api`. Para usar o sistema pela 
 | Erro de porta na 8080 | Feche o programa que está usando a 8080 e rode `docker compose up -d` de novo |
 | A API não responde no passo 4 | Veja o erro com `docker compose logs app` |
 
-Outros casos em [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
-
 ## ⚙️ Configuração (`.env`)
 
 | Variável | Padrão | Para quê |
