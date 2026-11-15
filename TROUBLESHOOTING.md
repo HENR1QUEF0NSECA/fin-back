@@ -4,14 +4,14 @@
 
 ### 1. Docker / Docker Compose
 
-#### ❌ "docker-compose: command not found"
+#### ❌ "docker" não é reconhecido como comando
 ```
 Docker Desktop não está instalado ou não está no PATH
 ```
 **Solução:**
 - Instale Docker Desktop: https://www.docker.com/products/docker-desktop
 - Reinicie o terminal após instalar
-- Verifique: `docker --version` e `docker-compose --version`
+- Verifique: `docker --version` e `docker compose version`
 
 ---
 
@@ -30,7 +30,7 @@ A API dentro do Docker continua usando a porta interna 5432. Se você roda a API
 B) Parar o serviço existente:
 ```powershell
 # Se foi outro Docker:
-docker-compose down
+docker compose down
 
 # Se foi PostgreSQL instalado localmente:
 # Windows: Services > PostgreSQL > Stop
@@ -80,8 +80,8 @@ A API não consegue logar no banco
 - Use no `DB_PASSWORD` a mesma senha com que o volume foi criado; **ou**
 - Recrie o volume (⚠️ **apaga todos os dados do banco**):
 ```powershell
-docker-compose down -v
-docker-compose up --build
+docker compose down -v
+docker compose up --build
 ```
 
 ---
@@ -103,13 +103,13 @@ Banco de dados não está respondendo
 **Debug:**
 ```powershell
 # Ver status dos containers
-docker-compose ps
+docker compose ps
 
 # Ver logs do PostgreSQL
-docker-compose logs postgres
+docker compose logs postgres
 
 # Reiniciar
-docker-compose restart postgres
+docker compose restart postgres
 ```
 
 ---
@@ -121,12 +121,12 @@ Erro durante a compilação do JAR
 **Soluções:**
 ```powershell
 # Limpar cache e tentar novamente
-docker-compose down -v
-docker-compose up --build
+docker compose down -v
+docker compose up --build
 
 # Ou build manual primeiro
 .\gradlew.bat clean build -x test
-docker-compose up
+docker compose up
 ```
 
 ---
@@ -140,8 +140,8 @@ O banco não foi criado ou foi deletado
 **Solução:**
 ```powershell
 # Remover volumes e recriar
-docker-compose down -v
-docker-compose up
+docker compose down -v
+docker compose up
 ```
 
 O banco será criado automaticamente na primeira execução.
@@ -182,13 +182,13 @@ API não está rodando
 **Verificação:**
 ```powershell
 # Checar se container está rodando
-docker-compose ps
+docker compose ps
 
 # Testar se API responde (sem token, deve voltar 401 em JSON: a API está no ar)
 curl.exe -i http://localhost:8080/api/categorias
 ```
 
-**Se não responder:** `docker-compose logs app`
+**Se não responder:** `docker compose logs app`
 
 ---
 
@@ -245,8 +245,8 @@ config.setAllowedOrigins(List.of(
 
 C) **Rebuildar a API:**
 ```powershell
-docker-compose down
-docker-compose up --build
+docker compose down
+docker compose up --build
 ```
 
 D) **Verificar headers de resposta** (use `curl.exe`: no PowerShell 5.1, `curl` é apelido do `Invoke-WebRequest`):
@@ -316,7 +316,7 @@ Se o cookie não aparece depois do login:
 **Diagnóstico:**
 ```powershell
 # Ver logs em tempo real
-docker-compose logs -f app
+docker compose logs -f app
 
 # Ver recursos dos containers
 docker stats
@@ -407,7 +407,7 @@ JWT_EXPIRATION=3600000
 # 604800000 = 7 dias
 ```
 
-Depois reinicie a API (no Docker: `docker-compose up -d`).
+Depois reinicie a API (no Docker: `docker compose up -d`).
 
 ---
 
@@ -417,7 +417,7 @@ Depois reinicie a API (no Docker: `docker-compose up -d`).
 1. **Dockerfile** já pronto em `./Dockerfile`
 2. Deploy para:
    - **Railway.app** (mais simples para acadêmico)
-   - **Heroku** (pode custar)
+   - **Heroku** (pago)
    - **AWS ECS** / **Google Cloud Run** / **Azure Container Instances**
    - **VPS com Docker**
 
@@ -432,24 +432,19 @@ Depois reinicie a API (no Docker: `docker-compose up -d`).
 
 ### P: Posso usar sem Docker?
 
-**R:** Sim:
-1. Instale PostgreSQL 12+
-2. Crie banco: `CREATE DATABASE finance;`
-3. Copie o modelo (`Copy-Item .env.example .env`) e preencha no `.env` as credenciais locais (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`) e o `JWT_SECRET`
+**R:** Sim (passo a passo completo em [Rodar a API sem Docker](./README.md#-rodar-a-api-sem-docker)):
+1. Instale o JDK 21 e o PostgreSQL 16 (o Gradle não precisa: o `gradlew` baixa sozinho)
+2. Crie o banco: `CREATE DATABASE finance;`
+3. Copie o modelo (`Copy-Item .env.example .env`) e coloque no `DB_PASSWORD` a senha do usuário `postgres` do seu PostgreSQL
 4. Execute, a partir da raiz do projeto: `.\gradlew.bat bootRun` (ou com o perfil `dev` para ver o SQL no log: `.\gradlew.bat bootRun --args='--spring.profiles.active=dev'`)
 
 ---
 
 ### P: Preciso de documentação Swagger?
 
-**R:** Sim! Pode adiciona:
+**R:** O projeto não tem Swagger. Os endpoints estão documentados no [README](./README.md#-endpoints-da-api), com exemplos de requisição e resposta, e prontos para testar no [requests.http](./requests.http) (extensão REST Client do VS Code).
 
-1. Adicione ao `build.gradle`:
-```gradle
-implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.0'
-```
-
-2. Acesse: `http://localhost:8080/swagger-ui.html`
+Para adicionar, use o `springdoc-openapi` numa versão compatível com o Spring Boot 4. A linha 2.x é para o Spring Boot 3 e não funciona aqui.
 
 ---
 
@@ -479,7 +474,7 @@ Detalhes no [README](./README.md#-testes-automatizados).
 1. Consulte [DOCKER_SETUP.md](./DOCKER_SETUP.md)
 2. Consulte [QUICK_START.md](./QUICK_START.md)
 3. Consulte [README.md](./README.md)
-4. Verifique logs: `docker-compose logs -f`
+4. Verifique logs: `docker compose logs -f`
 
 **Bom debugging! 🔍**
 

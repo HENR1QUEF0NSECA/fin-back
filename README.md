@@ -126,13 +126,13 @@ Veja a documentação completa em [DOCKER_SETUP.md](./DOCKER_SETUP.md)
 Copy-Item .env.example .env
 
 # Iniciar tudo com Docker Compose
-docker-compose up --build
+docker compose up --build
 
 # Em background
-docker-compose up -d --build
+docker compose up -d --build
 
 # Parar
-docker-compose down
+docker compose down
 ```
 
 **Ou use o script PowerShell:**

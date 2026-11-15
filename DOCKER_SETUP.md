@@ -30,7 +30,7 @@ Depois edite o `.env` e preencha pelo menos `DB_PASSWORD` e `JWT_SECRET` (veja a
 
 ### 3️⃣ Inicie os containers (API + PostgreSQL)
 ```powershell
-docker-compose up --build
+docker compose up --build
 ```
 
 **Esperado:**
@@ -41,20 +41,20 @@ docker-compose up --build
 
 **Para rodar em background:**
 ```powershell
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### 4️⃣ Parar os containers
 ```powershell
-docker-compose down
+docker compose down
 ```
 
 **Remover dados (limpar volumes):**
 ```powershell
-docker-compose down -v
+docker compose down -v
 ```
 
-> ⚠️ **Já tinha o volume do Postgres de antes?** O Postgres só define a senha na **primeira** criação do volume. Se o volume foi criado com outra senha, use essa mesma senha no `DB_PASSWORD` do `.env`, ou recrie o volume com `docker-compose down -v` (**apaga os dados do banco**). Senão a API falha com `password authentication failed for user "postgres"`.
+> ⚠️ **Já tinha o volume do Postgres de antes?** O Postgres só define a senha na **primeira** criação do volume. Se o volume foi criado com outra senha, use essa mesma senha no `DB_PASSWORD` do `.env`, ou recrie o volume com `docker compose down -v` (**apaga os dados do banco**). Senão a API falha com `password authentication failed for user "postgres"`.
 
 ---
 
@@ -363,7 +363,7 @@ JWT_EXPIRATION=86400000
 | `JWT_EXPIRATION` | Não (padrão `86400000`) | Validade do token em ms (24 horas) |
 | `DB_URL` | Não | Só para rodar a API fora do Docker. Dentro do Docker o compose já usa `jdbc:postgresql://postgres:5432/finance` |
 
-Depois de mudar o `.env`, recrie os containers com `docker-compose up -d --build`. (Mudar o `DB_PASSWORD` não altera a senha de um volume que já existe; veja o aviso no passo 4️⃣.)
+Depois de mudar o `.env`, recrie os containers com `docker compose up -d --build`. (Mudar o `DB_PASSWORD` não altera a senha de um volume que já existe; veja o aviso no passo 4️⃣.)
 
 ---
 
@@ -372,10 +372,10 @@ Depois de mudar o `.env`, recrie os containers com `docker-compose up -d --build
 ### "Postgres connection refused"
 ```powershell
 # Verificar se o container está rodando
-docker-compose ps
+docker compose ps
 
 # Ver logs
-docker-compose logs postgres
+docker compose logs postgres
 ```
 
 ### "Port 5432 already in use"
@@ -389,15 +389,15 @@ Se também roda a API fora do Docker, ajuste a porta no `DB_URL` (`jdbc:postgres
 O `.env` não existe ou está sem `DB_PASSWORD`/`JWT_SECRET`. Veja o passo 2️⃣.
 
 ### "password authentication failed for user"
-O volume do Postgres foi criado com outra senha. Use essa senha no `DB_PASSWORD` ou recrie o volume com `docker-compose down -v` (apaga os dados).
+O volume do Postgres foi criado com outra senha. Use essa senha no `DB_PASSWORD` ou recrie o volume com `docker compose down -v` (apaga os dados).
 
 ### "API não responde"
 ```powershell
 # Reiniciar
-docker-compose restart app
+docker compose restart app
 
 # Ver logs da API
-docker-compose logs -f app
+docker compose logs -f app
 ```
 
 ### "Token expirado"
@@ -408,7 +408,7 @@ Tokens expiram em 24 horas. Faça login novamente para obter novo token.
 ## 📝 Notas
 
 - Banco de dados **persiste** em volumes Docker (dados não são perdidos ao reiniciar)
-- Para **limpar tudo**, use: `docker-compose down -v`
+- Para **limpar tudo**, use: `docker compose down -v`
 - JWT expira em **24h** (86400000 ms) — ajuste em `JWT_EXPIRATION` no `.env` se necessário
 - CORS está configurado para `localhost:3000` (front Next.js) e `localhost:4200`; adicione outras origens conforme necessário em `CorsConfig.java`
 - O `Dockerfile` gera a imagem com `-x test`; os testes automatizados rodam separados, com `.\gradlew.bat test` (veja o [README](./README.md#-testes-automatizados))
@@ -418,8 +418,8 @@ Tokens expiram em 24 horas. Faça login novamente para obter novo token.
 ## 📞 Suporte
 
 Dúvidas? Verifique:
-1. Se Postgres está rodando: `docker-compose ps`
-2. Logs: `docker-compose logs app` e `docker-compose logs postgres`
+1. Se Postgres está rodando: `docker compose ps`
+2. Logs: `docker compose logs app` e `docker compose logs postgres`
 3. Testes com cURL (exemplos acima)
 
 **Bom desenvolvimento!** 🚀

@@ -24,13 +24,13 @@ Os valores de exemplo já funcionam para rodar localmente. Num deploy de verdade
 
 ### 4. Iniciar tudo com Docker
 ```powershell
-docker-compose up --build
+docker compose up --build
 ```
 
 **Esperado:** Verá algo como:
 ```
-app_1      | ... Started FinanceApplication in 8.234 seconds
-postgres_1 | database system is ready to accept connections
+finance-app-db       | database system is ready to accept connections
+finance-app-backend  | ... Started FinanceApplication in 8.234 seconds
 ```
 
 ### 5. API está rodando em:
@@ -73,8 +73,8 @@ O login devolve `{ "token": "...", "tipo": "Bearer", "usuarioId": 1, "nome": "Te
 
 ## 🛑 Parar
 ```powershell
-# Em outro terminal, ou Ctrl+C no terminal onde rodou docker-compose
-docker-compose down
+# Em outro terminal, ou Ctrl+C no terminal onde rodou docker compose
+docker compose down
 ```
 
 ---
@@ -85,8 +85,8 @@ docker-compose down
 |----------|---------|
 | "required variable DB_PASSWORD is missing a value" | Falta o `.env` (ou o valor nele): veja o passo 3 |
 | "Port 5432 already in use" | Defina `POSTGRES_PORT=5433` no `.env` |
-| "password authentication failed for user" | O volume do Postgres foi criado com outra senha: use a mesma senha no `DB_PASSWORD` ou recrie o volume com `docker-compose down -v` (⚠️ apaga os dados) |
-| API não responde | `docker-compose logs app` para ver erros (ex.: `JWT_SECRET` com menos de 32 caracteres impede a API de subir) |
+| "password authentication failed for user" | O volume do Postgres foi criado com outra senha: use a mesma senha no `DB_PASSWORD` ou recrie o volume com `docker compose down -v` (⚠️ apaga os dados) |
+| API não responde | `docker compose logs app` para ver erros (ex.: `JWT_SECRET` com menos de 32 caracteres impede a API de subir) |
 | Token expirado | Faça login novamente |
 
 Mais casos em [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).

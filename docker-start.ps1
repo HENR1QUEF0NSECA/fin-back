@@ -45,39 +45,41 @@ switch ($action.ToLower()) {
         }
 
         Write-Host "[*] Iniciando containers..." -ForegroundColor Blue
-        Write-Host "    - PostgreSQL em localhost:5432" -ForegroundColor Gray
+        $portaPostgres = (Get-Content ".env" | Where-Object { $_ -match '^POSTGRES_PORT=' } | Select-Object -First 1) -replace '^POSTGRES_PORT=', ''
+        if (-not $portaPostgres) { $portaPostgres = "5432" }
+        Write-Host "    - PostgreSQL em localhost:$portaPostgres" -ForegroundColor Gray
         Write-Host "    - API em http://localhost:8080" -ForegroundColor Gray
         Write-Host ""
 
         if ($detach) {
             Write-Host "[*] Modo background (-d)" -ForegroundColor Cyan
-            docker-compose up -d --build
+            docker compose up -d --build
         } else {
             Write-Host "[*] Modo foreground (pressione Ctrl+C para parar)" -ForegroundColor Cyan
-            docker-compose up --build
+            docker compose up --build
         }
         break
     }
     "down" {
         Write-Host "[*] Parando containers..." -ForegroundColor Yellow
-        docker-compose down
+        docker compose down
         Write-Host "[✓] Containers parados" -ForegroundColor Green
         break
     }
     "restart" {
         Write-Host "[*] Reiniciando containers..." -ForegroundColor Yellow
-        docker-compose restart
+        docker compose restart
         Write-Host "[✓] Containers reiniciados" -ForegroundColor Green
         break
     }
     "logs" {
-        Write-Host "[*] Mostrando logs (_detendo com Ctrl+C)..." -ForegroundColor Blue
-        docker-compose logs -f
+        Write-Host "[*] Mostrando logs (saia com Ctrl+C)..." -ForegroundColor Blue
+        docker compose logs -f
         break
     }
     "status" {
         Write-Host "[*] Status dos containers:" -ForegroundColor Blue
-        docker-compose ps
+        docker compose ps
         break
     }
     default {
