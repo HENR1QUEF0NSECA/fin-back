@@ -10,6 +10,7 @@ import com.ufu.finance.exception.NaoAutenticadoException;
 import com.ufu.finance.exception.RecursoNaoEncontradoException;
 import com.ufu.finance.exception.RequisicaoInvalidaException;
 import com.ufu.finance.repository.CategoriaRepository;
+import com.ufu.finance.repository.InvestimentoRepository;
 import com.ufu.finance.repository.TransacaoRepository;
 import com.ufu.finance.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,8 @@ public class TransacaoService {
     private final UsuarioRepository usuarioRepository;
 
     private final CategoriaRepository categoriaRepository;
+
+    private final InvestimentoRepository investimentoRepository;
 
     private final OrcamentoService orcamentoService;
 
@@ -175,6 +178,8 @@ public class TransacaoService {
         BigDecimal totalDespesas = transacaoRepository
                 .sumByTipoAndMesAno(usuarioId, TipoTransacao.D, mes, ano);
 
+        BigDecimal totalInvestido = investimentoRepository.sumNoMes(usuarioId, mes, ano);
+
         List<GraficoCategoriaDTO> despesasPorCategoria = transacaoRepository
                 .sumPorCategoriaNoMes(usuarioId, TipoTransacao.D, mes, ano)
                 .stream()
@@ -187,7 +192,7 @@ public class TransacaoService {
                 .map(row -> new GraficoCategoriaDTO((String) row[0], (BigDecimal) row[1]))
                 .collect(Collectors.toList());
 
-        return new ResumoMensalDTO(mes, ano, totalReceitas, totalDespesas,
+        return new ResumoMensalDTO(mes, ano, totalReceitas, totalDespesas, totalInvestido,
                 despesasPorCategoria, receitasPorCategoria);
     }
 
@@ -206,6 +211,13 @@ public class TransacaoService {
                         ((Number) row[0]).intValue(), (BigDecimal) row[1]))
                 .collect(Collectors.toList());
 
-        return new EvolucaoMensalDTO(ano, receitas, despesas);
+        List<EvolucaoMensalDTO.PontoMensalDTO> investimentos = investimentoRepository
+                .sumPorMesNoAno(usuarioId, ano)
+                .stream()
+                .map(row -> new EvolucaoMensalDTO.PontoMensalDTO(
+                        ((Number) row[0]).intValue(), (BigDecimal) row[1]))
+                .collect(Collectors.toList());
+
+        return new EvolucaoMensalDTO(ano, receitas, despesas, investimentos);
     }
 }

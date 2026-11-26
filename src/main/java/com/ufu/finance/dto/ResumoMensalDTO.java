@@ -9,15 +9,17 @@ public record ResumoMensalDTO(
         BigDecimal totalReceitas,
         BigDecimal totalDespesas,
         BigDecimal saldo,
+        BigDecimal totalInvestido,
         List<GraficoCategoriaDTO> despesasPorCategoria,
         List<GraficoCategoriaDTO> receitasPorCategoria) {
 
     public ResumoMensalDTO(int mes, int ano,
                            BigDecimal totalReceitas,
                            BigDecimal totalDespesas,
+                           BigDecimal totalInvestido,
                            List<GraficoCategoriaDTO> despesasPorCategoria,
                            List<GraficoCategoriaDTO> receitasPorCategoria) {
         this(mes, ano, totalReceitas, totalDespesas, totalReceitas.subtract(totalDespesas),
-                despesasPorCategoria, receitasPorCategoria);
+                totalInvestido, despesasPorCategoria, receitasPorCategoria);
     }
 }
