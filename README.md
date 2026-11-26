@@ -168,6 +168,8 @@ erDiagram
 
 Um usuário só pode ter um orçamento por categoria em cada mês (restrição única em `id_usuario`, `id_categoria`, `mes` e `ano`). As tabelas e as categorias são criadas pela própria API na primeira execução.
 
+O documento completo da modelagem está em [`docs/modelagem-de-dados.pdf`](docs/modelagem-de-dados.pdf): o diagrama entidade-relacionamento, os atributos e as regras de cada tabela, os relacionamentos com suas cardinalidades e as telas do sistema que usam cada tabela.
+
 ## 📡 Endpoints da API
 
 Só o login e o cadastro funcionam sem token. Nas outras rotas, envie o token devolvido pelo login no header `Authorization: Bearer <token>`. O arquivo [requests.http](./requests.http) tem exemplos prontos de todas as rotas (extensão REST Client do VS Code).
