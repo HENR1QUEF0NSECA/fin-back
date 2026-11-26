@@ -10,6 +10,10 @@ spring:
     init:
       mode: never
 
+app:
+  demo:
+    ativo: false
+
 jwt:
   secret: segredo-usado-somente-nos-testes-automatizados-0123456789
   expiration: 3600000

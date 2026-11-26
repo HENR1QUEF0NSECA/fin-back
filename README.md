@@ -44,6 +44,16 @@ Abra http://localhost:8080/api/categorias no navegador. Deve aparecer `{"status"
 
 Pronto: a API responde em `http://localhost:8080/api`. Para usar o sistema pela interface, siga agora o [README do fin-front](https://github.com/HENR1QUEF0NSECA/fin-front#readme).
 
+### Conta de demonstração
+
+Na primeira vez que a API sobe, ela cria uma conta já preenchida com os últimos 3 meses de receitas, despesas e orçamentos, para ver o sistema funcionando sem cadastrar nada:
+
+| E-mail | Senha |
+|---|---|
+| `demo@finplan.local` | `demo1234` |
+
+Os dados são gerados a partir da data do dia, então o mês atual sempre tem lançamentos. Se a conta já existir, nada é alterado.
+
 ### Parar e rodar de novo
 
 | Para | Comando (dentro da pasta `fin-back`) |
@@ -94,7 +104,7 @@ Opcional, para quem prefere rodar a API direto no computador.
 
 ## 🧪 Testes automatizados
 
-São 45 testes, que rodam sem PostgreSQL e sem `.env` (usam um banco H2 em memória):
+São 49 testes, que rodam sem PostgreSQL e sem `.env` (usam um banco H2 em memória):
 
 ```bash
 ./gradlew test
