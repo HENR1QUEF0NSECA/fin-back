@@ -185,16 +185,18 @@ class ApiIntegracaoTest {
     }
 
     @Test
-    @DisplayName("data futura, anterior a 2000 ou inexistente devolve 400 no campo data")
+    @DisplayName("data futura, anterior a 2000 ou inexistente devolve 400")
     void dataDaTransacaoInvalida() throws Exception {
         String token = novoUsuarioLogado();
         String corpo = "{'tipo':'D','valor':10,'categoriaId':%d,'data':'%s'}";
 
-        for (String data : new String[] {LocalDate.now().plusDays(1).toString(), "1999-12-31"}) {
-            comToken(post("/api/transacoes"), token, corpo, categoriaId, data)
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.campos.data").value("Data deve estar entre 01/01/2000 e hoje"));
-        }
+        comToken(post("/api/transacoes"), token, corpo, categoriaId, LocalDate.now().plusDays(1).toString())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.data").value("Data não pode ser no futuro"));
+
+        comToken(post("/api/transacoes"), token, corpo, categoriaId, "1999-12-31")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value("Data deve ser a partir de 01/01/2000"));
 
         comToken(post("/api/transacoes"), token, corpo, categoriaId, "2025-02-30")
                 .andExpect(status().isBadRequest())

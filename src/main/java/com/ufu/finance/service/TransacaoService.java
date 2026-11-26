@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TransacaoService {
 
+    private static final LocalDate DATA_MINIMA = LocalDate.of(2000, 1, 1);
+
     private final TransacaoRepository transacaoRepository;
 
     private final UsuarioRepository usuarioRepository;
@@ -77,6 +79,9 @@ public class TransacaoService {
     }
 
     private static void preencher(Transacao transacao, TransacaoRequestDTO dto, Categoria categoria) {
+        if (dto.getData() != null && dto.getData().isBefore(DATA_MINIMA)) {
+            throw new RequisicaoInvalidaException("Data deve ser a partir de 01/01/2000");
+        }
         transacao.setCategoria(categoria);
         transacao.setValor(dto.getValor());
         transacao.setTipo(dto.getTipo());

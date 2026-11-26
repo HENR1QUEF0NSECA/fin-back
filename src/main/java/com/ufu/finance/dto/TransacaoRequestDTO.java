@@ -1,10 +1,10 @@
 package com.ufu.finance.dto;
 
 import com.ufu.finance.enums.TipoTransacao;
-import com.ufu.finance.validation.DataTransacao;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,6 +30,6 @@ public class TransacaoRequestDTO {
     @Size(max = 255, message = "Descrição deve ter no máximo 255 caracteres")
     private String descricao;
 
-    @DataTransacao
+    @PastOrPresent(message = "Data não pode ser no futuro")
     private LocalDate data;
 }

@@ -1,9 +1,9 @@
 package com.ufu.finance.dto;
 
-import com.ufu.finance.validation.Ano;
-import com.ufu.finance.validation.Mes;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,11 +18,13 @@ public class OrcamentoRequestDTO {
     private Integer categoriaId;
 
     @NotNull(message = "Mês é obrigatório")
-    @Mes
+    @Min(value = 1, message = "Mês deve ser entre 1 e 12")
+    @Max(value = 12, message = "Mês deve ser entre 1 e 12")
     private Integer mes;
 
     @NotNull(message = "Ano é obrigatório")
-    @Ano
+    @Min(value = 2000, message = "Ano deve ser entre 2000 e 2100")
+    @Max(value = 2100, message = "Ano deve ser entre 2000 e 2100")
     private Integer ano;
 
     @NotNull(message = "Limite é obrigatório")

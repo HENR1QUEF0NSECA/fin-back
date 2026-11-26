@@ -77,14 +77,12 @@ class ValidacaoDtoTest {
     }
 
     @Test
-    void dataDaTransacaoVaiDe2000AteHoje() {
+    void dataDaTransacaoNaoPodeSerNoFuturo() {
         assertThat(erros(transacaoNaData(null))).isEmpty();
         assertThat(erros(transacaoNaData(LocalDate.of(2000, 1, 1)))).isEmpty();
         assertThat(erros(transacaoNaData(LocalDate.now()))).isEmpty();
-
-        Map<String, String> erroData = Map.of("data", "Data deve estar entre 01/01/2000 e hoje");
-        assertThat(erros(transacaoNaData(LocalDate.of(1999, 12, 31)))).isEqualTo(erroData);
-        assertThat(erros(transacaoNaData(LocalDate.now().plusDays(1)))).isEqualTo(erroData);
+        assertThat(erros(transacaoNaData(LocalDate.now().plusDays(1))))
+                .isEqualTo(Map.of("data", "Data não pode ser no futuro"));
     }
 
     private static TransacaoRequestDTO transacaoNaData(LocalDate data) {

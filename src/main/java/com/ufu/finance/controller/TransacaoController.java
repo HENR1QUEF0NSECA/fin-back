@@ -6,9 +6,9 @@ import com.ufu.finance.dto.TransacaoRequestDTO;
 import com.ufu.finance.dto.TransacaoResponseDTO;
 import com.ufu.finance.enums.TipoTransacao;
 import com.ufu.finance.service.TransacaoService;
-import com.ufu.finance.validation.Ano;
-import com.ufu.finance.validation.Mes;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -22,6 +22,10 @@ import java.util.List;
 @RequestMapping("/api/transacoes")
 @RequiredArgsConstructor
 public class TransacaoController {
+
+    private static final String MES = "Mês deve ser entre 1 e 12";
+
+    private static final String ANO = "Ano deve ser entre 2000 e 2100";
 
     private final TransacaoService transacaoService;
 
@@ -61,8 +65,8 @@ public class TransacaoController {
 
     @GetMapping("/mes")
     public ResponseEntity<List<TransacaoResponseDTO>> listarPorMes(
-            @RequestParam @Mes int mes,
-            @RequestParam @Ano int ano,
+            @RequestParam @Min(value = 1, message = MES) @Max(value = 12, message = MES) int mes,
+            @RequestParam @Min(value = 2000, message = ANO) @Max(value = 2100, message = ANO) int ano,
             @RequestAttribute Long usuarioId) {
         return ResponseEntity.ok(transacaoService.listarPorMesAno(usuarioId, mes, ano));
     }
@@ -84,15 +88,15 @@ public class TransacaoController {
 
     @GetMapping("/dashboard/resumo")
     public ResponseEntity<ResumoMensalDTO> resumoMensal(
-            @RequestParam @Mes int mes,
-            @RequestParam @Ano int ano,
+            @RequestParam @Min(value = 1, message = MES) @Max(value = 12, message = MES) int mes,
+            @RequestParam @Min(value = 2000, message = ANO) @Max(value = 2100, message = ANO) int ano,
             @RequestAttribute Long usuarioId) {
         return ResponseEntity.ok(transacaoService.resumoMensal(usuarioId, mes, ano));
     }
 
     @GetMapping("/dashboard/evolucao")
     public ResponseEntity<EvolucaoMensalDTO> evolucaoAnual(
-            @RequestParam @Ano int ano,
+            @RequestParam @Min(value = 2000, message = ANO) @Max(value = 2100, message = ANO) int ano,
             @RequestAttribute Long usuarioId) {
         return ResponseEntity.ok(transacaoService.evolucaoAnual(usuarioId, ano));
     }

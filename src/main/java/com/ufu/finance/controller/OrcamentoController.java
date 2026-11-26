@@ -3,9 +3,9 @@ package com.ufu.finance.controller;
 import com.ufu.finance.dto.OrcamentoRequestDTO;
 import com.ufu.finance.dto.OrcamentoResponseDTO;
 import com.ufu.finance.service.OrcamentoService;
-import com.ufu.finance.validation.Ano;
-import com.ufu.finance.validation.Mes;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +17,10 @@ import java.util.List;
 @RequestMapping("/api/orcamentos")
 @RequiredArgsConstructor
 public class OrcamentoController {
+
+    private static final String MES = "Mês deve ser entre 1 e 12";
+
+    private static final String ANO = "Ano deve ser entre 2000 e 2100";
 
     private final OrcamentoService orcamentoService;
 
@@ -61,8 +65,8 @@ public class OrcamentoController {
 
     @GetMapping("/mes")
     public ResponseEntity<List<OrcamentoResponseDTO>> listarPorMes(
-            @RequestParam @Mes int mes,
-            @RequestParam @Ano int ano,
+            @RequestParam @Min(value = 1, message = MES) @Max(value = 12, message = MES) int mes,
+            @RequestParam @Min(value = 2000, message = ANO) @Max(value = 2100, message = ANO) int ano,
             @RequestAttribute Long usuarioId) {
         List<OrcamentoResponseDTO> orcamentos = orcamentoService.listarOrcamentosMes(usuarioId, mes, ano);
         return ResponseEntity.ok(orcamentos);
@@ -71,8 +75,8 @@ public class OrcamentoController {
     @GetMapping("/categoria/{categoriaId}/mes")
     public ResponseEntity<OrcamentoResponseDTO> buscarPorCategoriaMes(
             @PathVariable Integer categoriaId,
-            @RequestParam @Mes int mes,
-            @RequestParam @Ano int ano,
+            @RequestParam @Min(value = 1, message = MES) @Max(value = 12, message = MES) int mes,
+            @RequestParam @Min(value = 2000, message = ANO) @Max(value = 2100, message = ANO) int ano,
             @RequestAttribute Long usuarioId) {
         OrcamentoResponseDTO orcamento = orcamentoService
                 .buscarOrcamentoCategoriaMes(usuarioId, categoriaId, mes, ano);
