@@ -1,9 +1,11 @@
 package com.ufu.finance.entity;
 
+import com.ufu.finance.enums.Prioridade;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -43,6 +45,11 @@ public class Orcamento {
     @NotNull
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal limite;
+
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'ESSENCIAL'")
+    @Column(nullable = false, length = 20)
+    private Prioridade prioridade = Prioridade.ESSENCIAL;
 
     @Column(name = "data_criacao", nullable = false, updatable = false)
     private LocalDateTime dataCriacao;

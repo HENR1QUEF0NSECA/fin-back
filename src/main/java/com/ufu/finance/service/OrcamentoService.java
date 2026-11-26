@@ -56,6 +56,9 @@ public class OrcamentoService {
         orcamento.setMes(dto.getMes());
         orcamento.setAno(dto.getAno());
         orcamento.setLimite(dto.getLimite());
+        if (dto.getPrioridade() != null) {
+            orcamento.setPrioridade(dto.getPrioridade());
+        }
 
         try {
             Orcamento saved = orcamentoRepository.save(orcamento);
@@ -92,6 +95,9 @@ public class OrcamentoService {
         orcamento.setMes(dto.getMes());
         orcamento.setAno(dto.getAno());
         orcamento.setLimite(dto.getLimite());
+        if (dto.getPrioridade() != null) {
+            orcamento.setPrioridade(dto.getPrioridade());
+        }
 
         try {
             Orcamento saved = orcamentoRepository.save(orcamento);

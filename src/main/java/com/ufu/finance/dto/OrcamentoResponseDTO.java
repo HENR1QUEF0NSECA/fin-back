@@ -1,6 +1,7 @@
 package com.ufu.finance.dto;
 
 import com.ufu.finance.entity.Orcamento;
+import com.ufu.finance.enums.Prioridade;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -18,6 +19,7 @@ public class OrcamentoResponseDTO {
     private Integer mes;
     private Integer ano;
     private BigDecimal limite;
+    private Prioridade prioridade;
 
     private BigDecimal consumido;
 
@@ -38,6 +40,7 @@ public class OrcamentoResponseDTO {
         this.mes = orcamento.getMes();
         this.ano = orcamento.getAno();
         this.limite = orcamento.getLimite();
+        this.prioridade = orcamento.getPrioridade();
         this.consumido = BigDecimal.ZERO;
         this.percentualUtilizado = 0.0;
         this.saldo = orcamento.getLimite();

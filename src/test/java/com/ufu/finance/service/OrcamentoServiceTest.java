@@ -4,6 +4,7 @@ import com.ufu.finance.dto.OrcamentoRequestDTO;
 import com.ufu.finance.entity.Categoria;
 import com.ufu.finance.entity.Orcamento;
 import com.ufu.finance.entity.Usuario;
+import com.ufu.finance.enums.Prioridade;
 import com.ufu.finance.enums.TipoTransacao;
 import com.ufu.finance.exception.AcessoNegadoException;
 import com.ufu.finance.exception.ConflitoException;
@@ -84,6 +85,27 @@ class OrcamentoServiceTest {
 
         gastoNoMes("79.99");
         assertThat(orcamentoService.shouldAlert(1L, 3, 5, 2026)).isFalse();
+    }
+
+    @Test
+    void criarGravaAPrioridadeInformada() {
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario(1L)));
+        when(categoriaRepository.findById(3)).thenReturn(Optional.of(categoria(3)));
+        when(orcamentoRepository.save(any(Orcamento.class))).thenAnswer(chamada -> chamada.getArgument(0));
+
+        OrcamentoRequestDTO dto = dto(3, 5, 2026, "100");
+        dto.setPrioridade(Prioridade.FACULTATIVO);
+
+        assertThat(orcamentoService.criar(dto, 1L).getPrioridade()).isEqualTo(Prioridade.FACULTATIVO);
+    }
+
+    @Test
+    void semPrioridadeOOrcamentoFicaEssencial() {
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario(1L)));
+        when(categoriaRepository.findById(3)).thenReturn(Optional.of(categoria(3)));
+        when(orcamentoRepository.save(any(Orcamento.class))).thenAnswer(chamada -> chamada.getArgument(0));
+
+        assertThat(orcamentoService.criar(dto(3, 5, 2026, "100"), 1L).getPrioridade()).isEqualTo(Prioridade.ESSENCIAL);
     }
 
     @Test
