@@ -33,6 +33,14 @@ public class TransacaoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<TransacaoResponseDTO> atualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody TransacaoRequestDTO dto,
+            @RequestAttribute Long usuarioId) {
+        return ResponseEntity.ok(transacaoService.atualizar(id, dto, usuarioId));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id, @RequestAttribute Long usuarioId) {
         transacaoService.deletar(id, usuarioId);

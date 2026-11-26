@@ -70,12 +70,26 @@ Content-Type: application/json
 "tipo": "R",
 "valor": 5000.00,
 "categoriaId": 6,
-"descricao": "Salário mensal"
+"descricao": "Salário mensal",
+"data": "2026-11-05"
 }
 
 ### 7. Listar todas as transações
 GET {{baseUrl}}/transacoes
 Authorization: Bearer {{token}}
+
+### 7.1 Alterar transação (a data é opcional; sem ela, a data não muda)
+PUT {{baseUrl}}/transacoes/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+"tipo": "D",
+"valor": 42.90,
+"categoriaId": 1,
+"descricao": "Uber para a faculdade",
+"data": "2026-11-20"
+}
 
 ### 8. Deletar transação por ID
 DELETE {{baseUrl}}/transacoes/1

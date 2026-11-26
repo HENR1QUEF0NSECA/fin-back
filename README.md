@@ -94,7 +94,7 @@ Opcional, para quem prefere rodar a API direto no computador.
 
 ## 🧪 Testes automatizados
 
-São 37 testes, que rodam sem PostgreSQL e sem `.env` (usam um banco H2 em memória):
+São 45 testes, que rodam sem PostgreSQL e sem `.env` (usam um banco H2 em memória):
 
 ```bash
 ./gradlew test
@@ -105,6 +105,58 @@ No Windows: `.\gradlew.bat test` (precisa do JDK 21). Sem JDK, rode pelo Docker:
 ```bash
 docker run --rm -v "${PWD}:/app" -w /app gradle:8-jdk21-alpine gradle test --no-daemon
 ```
+
+## 🗂️ Modelo de dados
+
+São quatro tabelas no PostgreSQL. Cada usuário tem as próprias transações e orçamentos, e as categorias são compartilhadas por todos.
+
+```mermaid
+erDiagram
+    USUARIOS ||--o{ TRANSACOES : registra
+    USUARIOS ||--o{ ORCAMENTOS : define
+    CATEGORIAS ||--o{ TRANSACOES : classifica
+    CATEGORIAS ||--o{ ORCAMENTOS : limita
+
+    USUARIOS {
+        bigint id PK
+        varchar nome "obrigatório"
+        varchar email UK "obrigatório, único"
+        varchar senha "hash BCrypt"
+        timestamp data_inclusao
+    }
+    CATEGORIAS {
+        int id PK
+        varchar nome UK "ex.: Transporte, Salário"
+    }
+    TRANSACOES {
+        bigint id_transacao PK
+        bigint id_usuario FK
+        int id_categoria FK
+        char tipo "R receita ou D despesa"
+        numeric valor "maior que zero"
+        timestamp dh_transacao
+        varchar descricao "opcional"
+    }
+    ORCAMENTOS {
+        bigint id PK
+        bigint id_usuario FK
+        int id_categoria FK
+        int mes "1 a 12"
+        int ano "2000 a 2100"
+        numeric limite "maior que zero"
+        timestamp data_criacao
+        timestamp data_atualizacao
+    }
+```
+
+| Relacionamento | Cardinalidade |
+|---|---|
+| Usuário → Transações | 1 usuário tem 0 ou mais transações; cada transação é de 1 usuário |
+| Usuário → Orçamentos | 1 usuário tem 0 ou mais orçamentos; cada orçamento é de 1 usuário |
+| Categoria → Transações | 1 categoria classifica 0 ou mais transações; cada transação tem 1 categoria |
+| Categoria → Orçamentos | 1 categoria aparece em 0 ou mais orçamentos; cada orçamento tem 1 categoria |
+
+Um usuário só pode ter um orçamento por categoria em cada mês (restrição única em `id_usuario`, `id_categoria`, `mes` e `ano`). As tabelas e as categorias são criadas pela própria API na primeira execução.
 
 ## 📡 Endpoints da API
 
@@ -117,7 +169,7 @@ Só o login e o cadastro funcionam sem token. Nas outras rotas, envie o token de
 | GET | `/api/usuarios/me` | Dados do usuário logado |
 | GET | `/api/categorias` | Lista as categorias |
 | GET, POST | `/api/transacoes` | Lista e cria transações |
-| DELETE | `/api/transacoes/{id}` | Exclui uma transação |
+| PUT, DELETE | `/api/transacoes/{id}` | Altera e exclui uma transação |
 | GET | `/api/transacoes/tipo/{tipo}` | Filtra por tipo (`R` receita, `D` despesa) |
 | GET | `/api/transacoes/categoria/{categoriaId}` | Filtra por categoria |
 | GET | `/api/transacoes/mes?mes=&ano=` | Filtra por mês |
@@ -128,6 +180,8 @@ Só o login e o cadastro funcionam sem token. Nas outras rotas, envie o token de
 | GET, PUT, DELETE | `/api/orcamentos/{id}` | Busca, altera e exclui um orçamento |
 | GET | `/api/orcamentos/mes?mes=&ano=` | Orçamentos de um mês |
 | GET | `/api/orcamentos/categoria/{categoriaId}/mes?mes=&ano=` | Orçamento de uma categoria no mês |
+
+Ao criar ou alterar uma transação, o campo `data` (`AAAA-MM-DD`, entre 01/01/2000 e hoje) é opcional: sem ele, a transação é criada com a data de hoje, e na alteração a data continua a mesma.
 
 Os erros sempre vêm no mesmo formato, com a mensagem em português e, nos erros de validação, uma mensagem por campo:
 

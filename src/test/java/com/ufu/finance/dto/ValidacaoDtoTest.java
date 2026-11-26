@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -73,6 +74,26 @@ class ValidacaoDtoTest {
         dto.setCategoriaId(1);
 
         assertThat(erros(dto)).containsOnlyKeys("valor");
+    }
+
+    @Test
+    void dataDaTransacaoVaiDe2000AteHoje() {
+        assertThat(erros(transacaoNaData(null))).isEmpty();
+        assertThat(erros(transacaoNaData(LocalDate.of(2000, 1, 1)))).isEmpty();
+        assertThat(erros(transacaoNaData(LocalDate.now()))).isEmpty();
+
+        Map<String, String> erroData = Map.of("data", "Data deve estar entre 01/01/2000 e hoje");
+        assertThat(erros(transacaoNaData(LocalDate.of(1999, 12, 31)))).isEqualTo(erroData);
+        assertThat(erros(transacaoNaData(LocalDate.now().plusDays(1)))).isEqualTo(erroData);
+    }
+
+    private static TransacaoRequestDTO transacaoNaData(LocalDate data) {
+        TransacaoRequestDTO dto = new TransacaoRequestDTO();
+        dto.setTipo(TipoTransacao.D);
+        dto.setValor(new BigDecimal("10.00"));
+        dto.setCategoriaId(1);
+        dto.setData(data);
+        return dto;
     }
 
     private static Map<String, String> erros(Object dto) {

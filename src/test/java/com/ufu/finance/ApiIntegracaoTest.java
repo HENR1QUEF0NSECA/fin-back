@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -142,6 +143,88 @@ class ApiIntegracaoTest {
     }
 
     @Test
+    @DisplayName("transação é alterada pelo dono, inclusive a data, e não por outro usuário")
+    void alteraTransacao() throws Exception {
+        String token = novoUsuarioLogado();
+        Integer outraCategoriaId = outraCategoria();
+
+        String resposta = comToken(post("/api/transacoes"), token,
+                "{'tipo':'D','valor':50,'categoriaId':%d,'descricao':'Ônibus','data':'2025-01-15'}", categoriaId)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.dataHoraTransacao").value(startsWith("2025-01-15T")))
+                .andReturn().getResponse().getContentAsString();
+        Integer id = JsonPath.read(resposta, "$.id");
+
+        comToken(put("/api/transacoes/" + id), token,
+                "{'tipo':'R','valor':80.5,'categoriaId':%d,'descricao':'  Reembolso  ','data':'2025-03-10'}",
+                outraCategoriaId)
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(JSON_UTF8))
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.tipo").value("R"))
+                .andExpect(jsonPath("$.valor").value(80.5))
+                .andExpect(jsonPath("$.categoriaId").value(outraCategoriaId))
+                .andExpect(jsonPath("$.descricao").value("Reembolso"))
+                .andExpect(jsonPath("$.dataHoraTransacao").value(startsWith("2025-03-10T")))
+                .andExpect(jsonPath("$.alertaOrcamento").value(false));
+
+        mvc.perform(get("/api/transacoes/mes?mes=3&ano=2025").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(id))
+                .andExpect(jsonPath("$[0].descricao").value("Reembolso"));
+
+        String outro = novoUsuarioLogado();
+        comToken(put("/api/transacoes/" + id), outro, "{'tipo':'D','valor':1,'categoriaId':%d}", categoriaId)
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.erro").value("Acesso negado: você não pode alterar esta transação"));
+
+        comToken(put("/api/transacoes/999999"), token, "{'tipo':'D','valor':1,'categoriaId':%d}", categoriaId)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.erro").value("Transação não encontrada"));
+    }
+
+    @Test
+    @DisplayName("data futura, anterior a 2000 ou inexistente devolve 400 no campo data")
+    void dataDaTransacaoInvalida() throws Exception {
+        String token = novoUsuarioLogado();
+        String corpo = "{'tipo':'D','valor':10,'categoriaId':%d,'data':'%s'}";
+
+        for (String data : new String[] {LocalDate.now().plusDays(1).toString(), "1999-12-31"}) {
+            comToken(post("/api/transacoes"), token, corpo, categoriaId, data)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.campos.data").value("Data deve estar entre 01/01/2000 e hoje"));
+        }
+
+        comToken(post("/api/transacoes"), token, corpo, categoriaId, "2025-02-30")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.data").value("Valor inválido. Use o formato AAAA-MM-DD"));
+    }
+
+    @Test
+    @DisplayName("orçamento é alterado pelo dono e devolve o novo limite")
+    void alteraOrcamento() throws Exception {
+        String token = novoUsuarioLogado();
+        String resposta = comToken(post("/api/orcamentos"), token,
+                "{'categoriaId':%d,'mes':5,'ano':2030,'limite':100}", categoriaId)
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        Integer id = JsonPath.read(resposta, "$.id");
+
+        comToken(put("/api/orcamentos/" + id), token,
+                "{'categoriaId':%d,'mes':6,'ano':2030,'limite':250.75}", categoriaId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.mes").value(6))
+                .andExpect(jsonPath("$.limite").value(250.75));
+
+        mvc.perform(get("/api/orcamentos/" + id).header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mes").value(6))
+                .andExpect(jsonPath("$.limite").value(250.75));
+    }
+
+    @Test
     @DisplayName("despesa que leva o gasto a 80% do orçamento liga o alerta")
     void alertaDeOrcamento() throws Exception {
         String token = novoUsuarioLogado();
@@ -229,6 +312,18 @@ class ApiIntegracaoTest {
                         .content(json("{'nome':'Usuário Teste','email':'%s','senha':'123'}", emailNovo())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.campos.senha").value("Senha deve ter entre 6 e 72 caracteres"));
+    }
+
+    private Integer outraCategoria() {
+        return categoriaRepository.findAll().stream()
+                .filter(categoria -> !categoria.getId().equals(categoriaId))
+                .findFirst()
+                .orElseGet(() -> {
+                    Categoria categoria = new Categoria();
+                    categoria.setNome("Lazer");
+                    return categoriaRepository.save(categoria);
+                })
+                .getId();
     }
 
     private static String emailNovo() {

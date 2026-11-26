@@ -1,6 +1,7 @@
 package com.ufu.finance.dto;
 
 import com.ufu.finance.enums.TipoTransacao;
+import com.ufu.finance.validation.DataTransacao;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
@@ -9,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -27,4 +29,7 @@ public class TransacaoRequestDTO {
 
     @Size(max = 255, message = "Descrição deve ter no máximo 255 caracteres")
     private String descricao;
+
+    @DataTransacao
+    private LocalDate data;
 }

@@ -43,37 +43,77 @@ public class TransacaoService {
 
         Transacao transacao = new Transacao();
         transacao.setUsuario(usuario);
-        transacao.setCategoria(categoria);
-        transacao.setValor(dto.getValor());
-        transacao.setDataHoraTransacao(LocalDateTime.now());
-        transacao.setDescricao(dto.getDescricao());
-        transacao.setTipo(dto.getTipo());
+        preencher(transacao, dto, categoria);
 
-        Transacao saved = transacaoRepository.save(transacao);
-        TransacaoResponseDTO response = new TransacaoResponseDTO(saved);
+        return responderComAlerta(transacaoRepository.save(transacao), usuarioId);
+    }
 
-        if (saved.getTipo() == TipoTransacao.D) {
-            LocalDateTime dh = saved.getDataHoraTransacao();
-            boolean alerta = orcamentoService.shouldAlert(
-                    usuarioId, dto.getCategoriaId(), dh.getMonthValue(), dh.getYear());
-            response.setAlertaOrcamento(alerta);
-        } else {
-            response.setAlertaOrcamento(false);
-        }
+    public TransacaoResponseDTO atualizar(Long idTransacao, TransacaoRequestDTO dto, Long usuarioId) {
+        Transacao transacao = buscarDoUsuario(idTransacao, usuarioId, "alterar");
 
-        return response;
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+                .orElseThrow(() -> new RequisicaoInvalidaException("Categoria não encontrada"));
+
+        preencher(transacao, dto, categoria);
+
+        return responderComAlerta(transacaoRepository.save(transacao), usuarioId);
     }
 
     public void deletar(Long idTransacao, Long usuarioId) {
+        Transacao transacao = buscarDoUsuario(idTransacao, usuarioId, "deletar");
+        transacaoRepository.delete(transacao);
+    }
+
+    private Transacao buscarDoUsuario(Long idTransacao, Long usuarioId, String acao) {
         Transacao transacao = transacaoRepository.findById(idTransacao)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Transação não encontrada"));
 
         if (!transacao.getUsuario().getId().equals(usuarioId)) {
             throw new AcessoNegadoException(
-                    "Acesso negado: você não pode deletar esta transação");
+                    "Acesso negado: você não pode " + acao + " esta transação");
         }
 
-        transacaoRepository.delete(transacao);
+        return transacao;
+    }
+
+    private static void preencher(Transacao transacao, TransacaoRequestDTO dto, Categoria categoria) {
+        transacao.setCategoria(categoria);
+        transacao.setValor(dto.getValor());
+        transacao.setTipo(dto.getTipo());
+        transacao.setDescricao(normalizarDescricao(dto.getDescricao()));
+        transacao.setDataHoraTransacao(definirDataHora(dto.getData(), transacao.getDataHoraTransacao()));
+    }
+
+    private static String normalizarDescricao(String descricao) {
+        if (descricao == null || descricao.isBlank()) {
+            return null;
+        }
+        return descricao.trim();
+    }
+
+    private static LocalDateTime definirDataHora(LocalDate data, LocalDateTime atual) {
+        if (data == null) {
+            return atual != null ? atual : LocalDateTime.now();
+        }
+        if (atual != null && atual.toLocalDate().equals(data)) {
+            return atual;
+        }
+        LocalTime hora = atual != null ? atual.toLocalTime() : LocalTime.now();
+        return data.atTime(hora);
+    }
+
+    private TransacaoResponseDTO responderComAlerta(Transacao transacao, Long usuarioId) {
+        TransacaoResponseDTO response = new TransacaoResponseDTO(transacao);
+
+        if (transacao.getTipo() == TipoTransacao.D) {
+            LocalDateTime dh = transacao.getDataHoraTransacao();
+            response.setAlertaOrcamento(orcamentoService.shouldAlert(
+                    usuarioId, transacao.getCategoria().getId(), dh.getMonthValue(), dh.getYear()));
+        } else {
+            response.setAlertaOrcamento(false);
+        }
+
+        return response;
     }
 
     public List<TransacaoResponseDTO> listarPorUsuario(Long usuarioId) {
